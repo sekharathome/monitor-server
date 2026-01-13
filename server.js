@@ -1,21 +1,22 @@
 const express = require('express');
+const path = require('path'); // Required to resolve directories
 const app = express();
 const http = require('http');
 const server = http.createServer(app);
 const { Server } = require("socket.io");
 
-// Increase maximum data size to handle high-res camera photos
 const io = new Server(server, {
-  maxHttpBufferSize: 1e8 // 100 MB
+  maxHttpBufferSize: 1e8 
 });
 
 const PORT = process.env.PORT || 3000;
 
-// Serve the index.html file from the same folder
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
-});
+// This serves ALL files in your folder (images, scripts, etc.)
+app.use(express.static(__dirname));
 
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 io.on('connection', (socket) => {
   console.log('A user connected: ' + socket.id);
 
@@ -72,3 +73,4 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
+
