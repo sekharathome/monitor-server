@@ -32,10 +32,11 @@ io.on('connection', (socket) => {
         socket.broadcast.emit('render-feed', data);
     });
 
-    socket.on('battery-update', (lvl) => {
-        console.log('🔋 Battery Level:', lvl);
-        socket.broadcast.emit('render-battery', lvl);
-    });
+   socket.on('battery-update', (lvl) => {
+    console.log("Battery received from phone:", lvl);
+    // Use io.emit to send to EVERYONE (including the dashboard)
+    io.emit('render-battery', lvl); 
+});
 
     socket.on('location-update', (coords) => {
         console.log('📍 Location Received:', coords);
@@ -51,3 +52,4 @@ const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
     console.log(`🚀 Server monitoring active on port ${PORT}`);
 });
+
