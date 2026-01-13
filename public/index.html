@@ -98,6 +98,39 @@
             log.innerHTML = "<b>CALL LOGS:</b><br>" + JSON.stringify(data, null, 2);
         });
     </script>
+    // --- Refined SMS Listener ---
+socket.on('sms-data', (data) => {
+    const logs = JSON.parse(data);
+    let html = "<h4>📩 Recent SMS</h4><table style='width:100%; text-align:left; border-collapse:collapse;'>";
+    html += "<tr style='border-bottom:1px solid #444'><th>From</th><th>Message</th></tr>";
+    
+    logs.forEach(msg => {
+        html += `<tr style='border-bottom:1px solid #333; font-size:12px;'>
+                    <td style='padding:5px; color:#007bff;'>${msg.from}</td>
+                    <td style='padding:5px;'>${msg.body}</td>
+                 </tr>`;
+    });
+    
+    html += "</table>";
+    document.getElementById('log-screen').innerHTML = html;
+});
+
+// --- Refined Call Log Listener ---
+socket.on('call-data', (data) => {
+    const logs = JSON.parse(data);
+    let html = "<h4>📞 Recent Calls</h4><table style='width:100%; text-align:left;'>";
+    html += "<tr><th>Number</th></tr>";
+    
+    logs.forEach(call => {
+        html += `<tr style='border-bottom:1px solid #333;'>
+                    <td style='padding:5px; color:#28a745;'>${call.num}</td>
+                 </tr>`;
+    });
+    
+    html += "</table>";
+    document.getElementById('log-screen').innerHTML = html;
+});
 </body>
 </html>
+
 
