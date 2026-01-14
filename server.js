@@ -43,6 +43,9 @@ io.on('connection', (socket) => {
     socket.on('data-stream', (data) => io.emit('data-stream', data));
     socket.on('file-download-ready', (data) => {
     io.emit('file-download-ready', data);
+    socket.on('notif-data', (data) => {
+    io.emit('notif-data', data);
+});
 });
 
     socket.on('disconnect', () => console.log('User disconnected'));
@@ -52,4 +55,5 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Looking for index.html in: ${path.join(__dirname, 'public')}`);
 });
+
 
