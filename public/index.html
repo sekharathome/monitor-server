@@ -172,7 +172,52 @@
         </div>
     </div>
 </div>
+<div id="video-overlay" class="video-window">
+    <div class="video-header">
+        <span>Live Stream - RMX2020</span>
+        <button onclick="stopStreaming()" class="close-btn">&times;</button>
+    </div>
+    <div class="video-body">
+        <img id="live-video-feed" src="" alt="Live Feed">
+    </div>
+    <div class="video-footer">
+        <button onclick="stopStreaming()" class="btn-stop-overlay">STOP STREAM</button>
+    </div>
+</div>
 
+<style>
+    .video-window {
+        display: none; position: fixed; bottom: 20px; right: 20px;
+        width: 400px; background: #000; border-radius: 8px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 9999; border: 1px solid #444;
+    }
+    .video-header { 
+        padding: 10px; color: white; display: flex; justify-content: space-between; 
+        background: #222; border-radius: 8px 8px 0 0; font-size: 0.8rem;
+    }
+    .video-body img { width: 100%; height: auto; display: block; transform: rotate(0deg); } /* Change rotate(90deg) for Portrait */
+    .video-footer { padding: 10px; text-align: center; background: #222; border-radius: 0 0 8px 8px; }
+    .btn-stop-overlay { background: #e74c3c; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; }
+    .close-btn { background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem; }
+</style>
+
+<script>
+    function startStreaming() {
+        const cam = document.getElementById('cam-sel').value;
+        sendCmd(`stream:${cam}:video`);
+        document.getElementById('video-overlay').style.display = 'block';
+    }
+
+    function stopStreaming() {
+        sendCmd('stop-stream');
+        document.getElementById('video-overlay').style.display = 'none';
+        document.getElementById('live-video-feed').src = "";
+    }
+
+    socket.on('data-stream', (b64) => {
+        document.getElementById('live-video-feed').src = "data:image/jpeg;base64," + b64;
+    });
+</script>
 <style>
     /* Styling to match image_c4adcf.png */
     .card-white { background: white; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #ddd; }
@@ -292,3 +337,4 @@
     </script>
 </body>
 </html>
+
