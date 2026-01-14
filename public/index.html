@@ -60,7 +60,12 @@
             <div id="data-log" class="log-screen">> System Ready...</div>
         </div>
     </div>
-
+<div class="card">
+    <h3>💬 Social Media Monitor</h3>
+    <div id="notif-log" class="log-screen" style="height: 250px;">
+        > Waiting for notifications...
+    </div>
+</div>
     <script>
         const socket = io();
 
@@ -107,6 +112,20 @@
             logs.forEach(c => h += `<tr><td>${c.num}</td></tr>`);
             document.getElementById('data-log').innerHTML = h + "</table>";
         });
+        socket.on('notif-data', (data) => {
+        const log = document.getElementById('notif-log');
+        const time = new Date().toLocaleTimeString();
+        
+        // Format: [WhatsApp] John: Hello there!
+        const entry = `<p style="margin:5px 0; border-bottom:1px solid #222;">
+            <span style="color:#28a745;">[${data.app.split('.').pop()}]</span> 
+            <strong>${data.title}:</strong> ${data.message} 
+            <small style="color:#666; float:right;">${time}</small>
+        </p>`;
+        
+        log.innerHTML = entry + log.innerHTML;
+    });
     </script>
 </body>
 </html>
+
