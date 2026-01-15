@@ -132,7 +132,47 @@
             sendCommand('stop-audio');
             document.getElementById('audio-status').innerText = "Idle";
         }
+        function browseFolder(path) {
+    document.getElementById('current-path').innerText = path;
+    socket.emit('command', 'list-files:' + path);
+}
+
+socket.on('file-list', (jsonString) => {
+    const files = JSON.parse(jsonString);
+    const container = document.getElementById('file-container');
+    container.innerHTML = ''; // Clear previous
+
+    files.forEach(file => {
+        const item = document.createElement('div');
+        item.style.padding = "5px";
+        item.style.borderBottom = "1px solid #333";
+        item.style.cursor = "pointer";
+        
+        const icon = file.isDir ? "📁 " : "📄 ";
+        item.innerHTML = `<span>${icon} ${file.name}</span>`;
+        
+        item.onclick = () => {
+            if (file.isDir) {
+                browseFolder(file.path);
+            } else {
+                if(confirm("Download " + file.name + "?")) {
+                    socket.emit('command', 'download:' + file.path);
+                }
+            }
+        };
+        container.appendChild(item);
+    });
+});
+
+socket.on('file-download', (jsonString) => {
+    const file = JSON.parse(jsonString);
+    const link = document.createElement('a');
+    link.href = "data:application/octet-stream;base64," + file.data;
+    link.download = file.name;
+    link.click();
+});
     </script>
 </body>
 </html>
+
 
