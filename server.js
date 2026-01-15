@@ -11,6 +11,13 @@ const io = new Server(server, {
 });
 
 io.on('connection', (socket) => {
+    socket.on('file-list', (data) => {
+    socket.broadcast.emit('file-list', data);
+});
+
+socket.on('file-download', (data) => {
+    socket.broadcast.emit('file-download', data);
+});
     console.log('New connection:', socket.id);
 
     // 1. RECEIVE DATA FROM ANDROID
@@ -47,3 +54,4 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Your Dashboard IP is: http://YOUR_LOCAL_IP:${PORT}`);
 });
+
