@@ -145,6 +145,69 @@
             document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
             event.currentTarget.classList.add('selected');
         }
+        // --- AUDIO PLAYBACK CONFIGURATION ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+let nextStartTime = 0;
+
+/**
+ * Converts Base64 PCM data to an AudioBuffer and schedules it for playback.
+ * This handles the "audio-stream" event from the Android MonitorService.
+ */
+function playPcmData(base64Data) {
+    // Decode Base64 to a byte array
+    const binaryString = window.atob(base64Data);
+    const len = binaryString.length;
+    const bytes = new Int16Array(len / 2);
+
+    for (let i = 0; i < len; i += 2) {
+        // Convert two bytes into one 16-bit little-endian integer
+        bytes[i / 2] = (binaryString.charCodeAt(i + 1) << 8) | binaryString.charCodeAt(i);
+    }
+
+    // Convert Int16 PCM to Float32 for Web Audio API
+    const float32Data = new Float32Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) {
+        float32Data[i] = bytes[i] / 32768.0;
+    }
+
+    // Create a buffer and schedule it
+    const buffer = audioCtx.createBuffer(1, float32Data.length, 44100);
+    buffer.getChannelData(0).set(float32Data);
+
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioCtx.destination);
+
+    // Timing logic to prevent gaps/stuttering
+    const currentTime = audioCtx.currentTime;
+    if (nextStartTime < currentTime) {
+        nextStartTime = currentTime;
+    }
+    source.start(nextStartTime);
+    nextStartTime += buffer.duration;
+}
+
+// --- NEW SOCKET LISTENER ---
+// Ensure this is inside your socket connection block
+socket.on('audio-stream', (data) => {
+    // Browsers block audio until a user clicks something. 
+    // Ensure you click "Connect" or "Start Stream" first to resume audioCtx.
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    playPcmData(data); //
+});
+
+// --- UPDATED COMMAND BUTTONS ---
+// Add these to your command sending function
+function startAudio() {
+    socket.emit('command', 'start-audio'); // Triggers startAudioCapture() in Android
+}
+
+function stopAudio() {
+    socket.emit('command', 'stop-audio'); // Triggers stopAudioCapture() in Android
+}
     </script>
 </body>
 </html>
+
