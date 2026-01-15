@@ -197,7 +197,20 @@ socket.on('audio-stream', (data) => {
     }
     playPcmData(data); //
 });
+const analyser = audioCtx.createAnalyser();
+analyser.fftSize = 256;
+const bufferLength = analyser.frequencyBinCount;
+const dataArray = new Uint8Array(bufferLength);
 
+// Inside playPcmData, before source.start():
+source.connect(analyser);
+analyser.connect(audioCtx.destination);
+
+function drawVisualizer() {
+    requestAnimationFrame(drawVisualizer);
+    analyser.getByteFrequencyData(dataArray);
+    // Use dataArray to draw bars on a <canvas> element
+}
 // --- UPDATED COMMAND BUTTONS ---
 // Add these to your command sending function
 function startAudio() {
@@ -210,4 +223,5 @@ function stopAudio() {
     </script>
 </body>
 </html>
+
 
