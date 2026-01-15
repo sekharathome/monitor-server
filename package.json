@@ -1,7 +1,6 @@
 {
   "name": "monitor-server",
   "version": "1.0.0",
-  "description": "Android Remote Monitor Bridge",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
