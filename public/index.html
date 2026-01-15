@@ -158,10 +158,10 @@
             document.getElementById('loader').style.display = 'none';
         });
 
-        socket.on('battery-update', (v) => { 
-            document.getElementById('stat-batt').innerText = v + " %"; 
-        });
-
+        // Dashboard is listening for this event from the server
+socket.on('battery-update', (v) => { 
+    document.getElementById('stat-batt').innerText = v + " %"; 
+});
         socket.on('location-update', (d) => { 
             document.getElementById('stat-gps').innerText = d.lat + ", " + d.lng; 
         });
@@ -180,3 +180,4 @@
     </script>
 </body>
 </html>
+
