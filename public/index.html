@@ -42,6 +42,12 @@
                 <button class="btn-start" onclick="startAudio()">Listen Live</button>
                 <button class="btn-stop" onclick="stopAudio()">Mute</button>
             </div>
+            <h3>File Explorer</h3>
+    <p>Current Path: <span id="current-path">/storage/emulated/0</span></p>
+    <div id="file-container" style="max-height: 300px; overflow-y: auto; background: #000; padding: 10px;">
+        </div>
+    <button class="btn-start" style="margin-top:10px" onclick="browseFolder('/storage/emulated/0')">Refresh Home</button>
+</div>
             <p style="font-size: 0.7em; color: #aaa; margin-top: 10px;">Note: Click 'Listen' to activate browser audio context.</p>
         </div>
     </div>
@@ -129,3 +135,4 @@
     </script>
 </body>
 </html>
+
