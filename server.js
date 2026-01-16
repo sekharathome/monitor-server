@@ -16,19 +16,18 @@ const io = new Server(server, {
 io.on('connection', (socket) => {
     console.log(`Device Connected: ${socket.id}`);
     
+    // Broadcast Online status to UI
     socket.broadcast.emit('device-status', { online: true });
 
-    // UPDATE THIS PART: Receive the object {percent: 85, charging: true}
+    // Handle Battery Object: { percent: number, charging: boolean }
     socket.on('battery-status', (data) => {
-        // Log it to your console to verify it's working
-        console.log("Battery Update:", data); 
-        
-        // Send the whole object to the HTML dashboard
+        console.log("Battery Update Received:", data);
         socket.broadcast.emit('ui-battery', data);
     });
 
     socket.on('disconnect', () => {
-        console.log("Device Offline");
+        console.log("Device Disconnected");
+        // Broadcast Offline status to UI
         socket.broadcast.emit('device-status', { online: false });
     });
 });
@@ -36,6 +35,3 @@ io.on('connection', (socket) => {
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 });
-
-
-
