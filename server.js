@@ -23,7 +23,10 @@ io.on('connection', (socket) => {
     socket.on('battery-status', (percent) => {
         socket.broadcast.emit('ui-battery', percent);
     });
-
+socket.on('battery-status', (data) => {
+    // data is now { percent: 85, charging: true }
+    socket.broadcast.emit('ui-battery', data);
+});
     // Handle Disconnect (When app is uninstalled or closed)
     socket.on('disconnect', () => {
         console.log("Device Offline");
@@ -34,3 +37,4 @@ io.on('connection', (socket) => {
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 });
+
