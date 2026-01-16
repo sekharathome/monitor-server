@@ -1,35 +1,115 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const path = require('path');
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Battery Status</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #000; margin: 0; }
 
-const app = express();
-const server = http.createServer(app);
-const PORT = process.env.PORT || 3000;
+        /* TOP CENTER FIXED ROW */
+        .top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: #111;
+            display: flex;
+            justify-content: center; /* Center the battery box */
+            align-items: center;
+            border-bottom: 1px solid #333;
+            z-index: 9999;
+        }
 
-app.use(express.static(path.join(__dirname, 'public')));
+        .battery-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
-const io = new Server(server, {
-    cors: { origin: "*" }
-});
+        /* Battery Box Styling */
+        .battery-box {
+            padding: 5px 15px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 1.4rem;
+            min-width: 60px;
+            text-align: center;
+            transition: all 0.4s ease;
+        }
 
-io.on('connection', (socket) => {
-    console.log(`Device Connected: ${socket.id}`);
-    
-    // Immediately tell the web that a device is online
-    socket.broadcast.emit('device-status', { online: true });
+        /* ONLINE: Dark Green Text, Light Green Background */
+        .online {
+            background-color: #90ee90; /* Light Green */
+            color: #006400;            /* Dark Green */
+        }
 
-    // Relay the battery number (e.g., 85) directly to the web
-    socket.on('battery-status', (data) => {
-        socket.broadcast.emit('ui-battery', data);
-    });
+        /* OFFLINE: Dark Red Text, Light Red Background */
+        .offline {
+            background-color: #ffcccb; /* Light Red */
+            color: #8b0000;            /* Dark Red */
+        }
 
-    socket.on('disconnect', () => {
-        console.log("Device Offline");
-        socket.broadcast.emit('device-status', { online: false });
-    });
-});
+        /* Charging Bolt - next to the box */
+        #charging-bolt {
+            font-size: 1.5rem;
+            color: #f1c40f;
+            display: none; /* Hidden unless charging data is sent */
+        }
 
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
-});
+        .content { padding-top: 80px; color: #555; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div class="top-nav">
+        <div class="battery-wrapper">
+            <div id="bat-box" class="battery-box offline">
+                <span id="bat-pct">--</span>%
+            </div>
+            <span id="charging-bolt">⚡</span>
+        </div>
+    </div>
+
+    <div class="content">
+        <p>Dashboard Monitoring Active</p>
+    </div>
+
+    <script>
+        const socket = io();
+        const batBox = document.getElementById('bat-box');
+        const batPct = document.getElementById('bat-pct');
+        const bolt = document.getElementById('charging-bolt');
+
+        // Handle Connection Status (Colors Only)
+        socket.on('device-status', (status) => {
+            if (status.online) {
+                batBox.classList.remove('offline');
+                batBox.classList.add('online');
+            } else {
+                batBox.classList.remove('online');
+                batBox.classList.add('offline');
+                batPct.innerText = "--";
+                bolt.style.display = "none";
+            }
+        });
+
+        // Handle Battery Data
+        socket.on('ui-battery', (data) => {
+            // Check if data is a number (85) or an object ({percent: 85})
+            const percentage = (typeof data === 'object') ? data.percent : data;
+            const isCharging = (typeof data === 'object') ? data.charging : false;
+
+            // Update UI
+            batPct.innerText = percentage;
+            
+            // Show/Hide bolt next to the box
+            bolt.style.display = isCharging ? "inline" : "none";
+
+            // Ensure color is green when receiving data
+            batBox.classList.remove('offline');
+            batBox.classList.add('online');
+        });
+    </script>
+</body>
+</html>
