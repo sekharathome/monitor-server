@@ -1,48 +1,83 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Status Monitor</title>
+    <title>Device Monitor</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #000; color: white; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .monitor-card { background: #111; padding: 40px; border-radius: 15px; border: 1px solid #333; width: 400px; text-align: center; }
-        .status-badge { display: inline-block; padding: 10px 20px; border-radius: 30px; font-weight: bold; margin-bottom: 20px; }
-        .online { background: #27ae60; box-shadow: 0 0 15px #27ae60; }
-        .offline { background: #c0392b; box-shadow: 0 0 15px #c0392b; }
-        .battery-level { font-size: 3rem; color: #f1c40f; }
-        .label { color: #888; font-size: 0.9rem; margin-top: 5px; }
+        body { font-family: sans-serif; background: #0f0f0f; color: white; margin: 0; }
+        
+        /* TOP ROW CONTAINER */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1a1a1a;
+            padding: 10px 30px;
+            border-bottom: 2px solid #333;
+        }
+
+        .status-group, .battery-group { display: flex; align-items: center; gap: 10px; }
+
+        .indicator { width: 12px; height: 12px; border-radius: 50%; }
+        .online-dot { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
+        .offline-dot { background: #e74c3c; box-shadow: 0 0 8px #e74c3c; }
+
+        .battery-text { font-size: 1.2rem; font-weight: bold; color: #f1c40f; }
+        .charging-icon { color: #2ecc71; font-size: 1.1rem; display: none; } /* Hidden by default */
+        
+        .main-content { padding: 20px; text-align: center; color: #666; }
     </style>
 </head>
 <body>
 
-    <div class="monitor-card">
-        <div id="status-tag" class="status-badge offline">DEVICE OFFLINE</div>
-        
-        <div class="battery-level"><span id="bat-pct">--</span>%</div>
-        <div class="label">Current Battery Life</div>
+    <div class="top-bar">
+        <div class="status-group">
+            <div id="status-dot" class="indicator offline-dot"></div>
+            <span id="status-text">DEVICE OFFLINE</span>
+        </div>
+
+        <div class="battery-group">
+            <span id="charging-bolt" class="charging-icon">⚡</span>
+            <span class="battery-text"><span id="bat-pct">--</span>%</span>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <h3>System Dashboard Active</h3>
+        <p>Waiting for device data...</p>
     </div>
 
     <script>
         const socket = io();
 
         socket.on('device-status', (status) => {
-            const tag = document.getElementById('status-tag');
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            
             if(status.online) {
-                tag.innerText = "DEVICE ONLINE";
-                tag.className = "status-badge online";
+                dot.className = "indicator online-dot";
+                text.innerText = "DEVICE ONLINE";
             } else {
-                tag.innerText = "DEVICE OFFLINE";
-                tag.className = "status-badge offline";
+                dot.className = "indicator offline-dot";
+                text.innerText = "DEVICE OFFLINE";
                 document.getElementById('bat-pct').innerText = "--";
+                document.getElementById('charging-bolt').style.display = "none";
             }
         });
 
-        socket.on('ui-battery', (percent) => {
-            document.getElementById('bat-pct').innerText = percent;
-            // Also ensure tag shows online
-            const tag = document.getElementById('status-tag');
-            tag.innerText = "DEVICE ONLINE";
-            tag.className = "status-badge online";
+        socket.on('ui-battery', (data) => {
+            // Update percentage
+            document.getElementById('bat-pct').innerText = data.percent;
+            
+            // Show/Hide charging bolt
+            const bolt = document.getElementById('charging-bolt');
+            bolt.style.display = data.charging ? "inline" : "none";
+
+            // If we are getting battery data, the device is online
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            dot.className = "indicator online-dot";
+            text.innerText = "DEVICE ONLINE";
         });
     </script>
 </body>
