@@ -18,12 +18,29 @@
 
         .status-group, .battery-group { display: flex; align-items: center; gap: 10px; }
 
-        .indicator { width: 12px; height: 12px; border-radius: 50%; }
-        .online-dot { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
-        .offline-dot { background: #e74c3c; box-shadow: 0 0 8px #e74c3c; }
+        /* Status Badge Styling */
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        /* Blue Theme for Online */
+        .online { 
+            background-color: #add8e6; /* LightBlue */
+            color: #00008b;            /* DarkBlue */
+        }
+
+        /* Red Theme for Offline */
+        .offline { 
+            background-color: #ffcccb; /* LightRed */
+            color: #8b0000;            /* DarkRed */
+        }
 
         .battery-text { font-size: 1.2rem; font-weight: bold; color: #f1c40f; }
-        .charging-icon { color: #2ecc71; font-size: 1.1rem; display: none; } /* Hidden by default */
+        .charging-icon { color: #2ecc71; font-size: 1.1rem; display: none; }
         
         .main-content { padding: 20px; text-align: center; color: #666; }
     </style>
@@ -32,8 +49,7 @@
 
     <div class="top-bar">
         <div class="status-group">
-            <div id="status-dot" class="status-badge offline"></div>
-            <span id="status-text">OFFLINE</span>
+            <div id="status-tag" class="status-badge offline">OFFLINE</div>
         </div>
 
         <div class="battery-group">
@@ -44,42 +60,40 @@
 
     <div class="main-content">
         <h3>System Dashboard Active</h3>
-        </div>
+        <p>Awaiting data from Android device...</p>
+    </div>
 
     <script>
         const socket = io();
 
+        // Handle Online/Offline Status
         socket.on('device-status', (status) => {
-            const dot = document.getElementById('status-dot');
-            const text = document.getElementById('status-text');
-            
+            const tag = document.getElementById('status-tag');
             if(status.online) {
-                dot.className = "status-badge online";
-                text.innerText = "ONLINE";
+                tag.innerText = "ONLINE";
+                tag.className = "status-badge online";
             } else {
-                dot.className = "status-badge offline";
-                text.innerText = "OFFLINE";
+                tag.innerText = "OFFLINE";
+                tag.className = "status-badge offline";
                 document.getElementById('bat-pct').innerText = "--";
                 document.getElementById('charging-bolt').style.display = "none";
             }
         });
 
-        socket.on('ui-battery', (percent) => {
-           document.getElementById('bat-pct').innerText = percent;
-            // Also ensure tag shows online
-            const tag = document.getElementById('status-tag');
-            tag.innerText = "ONLINE";
-            tag.className = "status-badge online";
+        // Handle Battery and Charging Data
+        socket.on('ui-battery', (data) => {
+            // 1. Update Percentage (Data is now an object {percent: x, charging: y})
+            document.getElementById('bat-pct').innerText = data.percent;
             
-            // Show/Hide charging bolt
+            // 2. Show/Hide charging bolt
             const bolt = document.getElementById('charging-bolt');
             bolt.style.display = data.charging ? "inline" : "none";
 
-         
+            // 3. Force status to Online if data is arriving
+            const tag = document.getElementById('status-tag');
+            tag.innerText = "ONLINE";
+            tag.className = "status-badge online";
         });
     </script>
 </body>
 </html>
-
-
-
