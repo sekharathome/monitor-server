@@ -1,97 +1,110 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Device Monitor</title>
+    <title>Device Administrator</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { font-family: sans-serif; background: #0f0f0f; color: white; margin: 0; }
         
-        /* TOP ROW CONTAINER */
+        /* TOP ROW CONTAINER - FIXED & CENTERED */
         .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
             display: flex;
-            justify-content: space-between;
+            justify-content: center; /* Center the content */
             align-items: center;
             background: #1a1a1a;
-            padding: 10px 30px;
+            padding: 10px 0;
             border-bottom: 2px solid #333;
+            z-index: 1000;
         }
 
-        .status-group, .battery-group { display: flex; align-items: center; gap: 10px; }
+        .battery-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-        /* Status Badge Styling */
-        .status-badge {
-            padding: 5px 15px;
-            border-radius: 6px;
+        /* The Battery Box */
+        .battery-box {
+            padding: 8px 20px;
+            border-radius: 8px;
             font-weight: bold;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
+            font-size: 1.5rem;
+            transition: background 0.5s, color 0.5s;
+            min-width: 80px;
+            text-align: center;
         }
 
-        /* Blue Theme for Online */
+        /* Online: Dark Green Text on Light Green Box */
         .online { 
-            background-color: #add8e6; /* LightBlue */
-            color: #00008b;            /* DarkBlue */
+            background-color: #90ee90; /* LightGreen */
+            color: #006400;            /* DarkGreen */
         }
 
-        /* Red Theme for Offline */
+        /* Offline: Dark Red Text on Light Red Box */
         .offline { 
             background-color: #ffcccb; /* LightRed */
             color: #8b0000;            /* DarkRed */
         }
 
-        .battery-text { font-size: 1.2rem; font-weight: bold; color: #f1c40f; }
-        .charging-icon { color: #2ecc71; font-size: 1.1rem; display: none; }
+        /* Charging Bolt - Placed NEXT to the box */
+        .charging-icon { 
+            color: #f1c40f; 
+            font-size: 1.8rem; 
+            display: none; 
+            text-shadow: 0 0 5px rgba(241, 196, 15, 0.5);
+        }
         
-        .main-content { padding: 20px; text-align: center; color: #666; }
+        .main-content { padding-top: 80px; text-align: center; color: #444; }
     </style>
 </head>
 <body>
 
     <div class="top-bar">
-        <div class="status-group">
-            <div id="status-tag" class="status-badge offline">OFFLINE</div>
-        </div>
-
-        <div class="battery-group">
+        <div class="battery-container">
+            <div id="bat-box" class="battery-box offline">
+                <span id="bat-pct">--</span>%
+            </div>
             <span id="charging-bolt" class="charging-icon">⚡</span>
-            <span class="battery-text"><span id="bat-pct">--</span>%</span>
         </div>
     </div>
 
     <div class="main-content">
-        <h3>System Dashboard Active</h3>
-        <p>Awaiting data from Android device...</p>
+        <h3>System Monitor</h3>
+        <p>Battery status is pinned to the top center.</p>
     </div>
 
     <script>
         const socket = io();
+        const batBox = document.getElementById('bat-box');
+        const batPct = document.getElementById('bat-pct');
+        const bolt = document.getElementById('charging-bolt');
 
-        // Handle Online/Offline Status
+        // Handle Connection Status
         socket.on('device-status', (status) => {
-            const tag = document.getElementById('status-tag');
             if(status.online) {
-                tag.innerText = "ONLINE";
-                tag.className = "status-badge online";
+                batBox.className = "battery-box online";
             } else {
-                tag.innerText = "OFFLINE";
-                tag.className = "status-badge offline";
-                document.getElementById('bat-pct').innerText = "--";
-                document.getElementById('charging-bolt').style.display = "none";
+                batBox.className = "battery-box offline";
+                batPct.innerText = "--";
+                bolt.style.display = "none";
             }
         });
 
         // Handle Battery and Charging Data
-       socket.on('ui-battery', (data) => { // Changed variable name to 'data'
-    document.getElementById('bat-pct').innerText = data.percent;
-    
-    const bolt = document.getElementById('charging-bolt');
-    bolt.style.display = data.charging ? "inline" : "none";
+        socket.on('ui-battery', (data) => {
+            // Update Percentage
+            batPct.innerText = data.percent;
+            
+            // Update Colors to Online
+            batBox.className = "battery-box online";
 
-    const tag = document.getElementById('status-tag');
-    tag.innerText = "ONLINE";
-    tag.className = "status-badge online";
-});
+            // Show/Hide charging bolt next to the box
+            bolt.style.display = data.charging ? "inline" : "none";
+        });
     </script>
 </body>
 </html>
-
