@@ -95,16 +95,14 @@
         });
 
         // Handle Battery and Charging Data
-        socket.on('ui-battery', (data) => {
-            // Update Percentage
-            batPct.innerText = data.percent;
-            
-            // Update Colors to Online
-            batBox.className = "battery-box online";
-
-            // Show/Hide charging bolt next to the box
-            bolt.style.display = data.charging ? "inline" : "none";
-        });
+       socket.on('ui-battery', (data) => { // Make sure this says 'data'
+    console.log("Received:", data); // Add this to debug in Browser Console (F12)
+    document.getElementById('bat-pct').innerText = data.percent;
+    
+    const bolt = document.getElementById('charging-bolt');
+    bolt.style.display = data.charging ? "inline" : "none";
+});
     </script>
 </body>
 </html>
+
