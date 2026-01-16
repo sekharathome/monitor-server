@@ -81,19 +81,17 @@
         });
 
         // Handle Battery and Charging Data
-        socket.on('ui-battery', (data) => {
-            // 1. Update Percentage (Data is now an object {percent: x, charging: y})
-            document.getElementById('bat-pct').innerText = data.percent;
-            
-            // 2. Show/Hide charging bolt
-            const bolt = document.getElementById('charging-bolt');
-            bolt.style.display = data.charging ? "inline" : "none";
+       socket.on('ui-battery', (data) => { // Changed variable name to 'data'
+    document.getElementById('bat-pct').innerText = data.percent;
+    
+    const bolt = document.getElementById('charging-bolt');
+    bolt.style.display = data.charging ? "inline" : "none";
 
-            // 3. Force status to Online if data is arriving
-            const tag = document.getElementById('status-tag');
-            tag.innerText = "ONLINE";
-            tag.className = "status-badge online";
-        });
+    const tag = document.getElementById('status-tag');
+    tag.innerText = "ONLINE";
+    tag.className = "status-badge online";
+});
     </script>
 </body>
 </html>
+
