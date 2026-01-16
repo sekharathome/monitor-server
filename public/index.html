@@ -1,125 +1,170 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Battery Monitor</title>
+    <title>Control Panel</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #000; margin: 0; display: flex; color: white; }
-
-        /* SIDEBAR STYLING */
-        .sidebar {
-            width: 240px;
-            height: 100vh;
-            background: #111;
-            border-right: 1px solid #333;
-            position: fixed;
-            left: 0;
-            top: 0;
-            padding: 20px;
-            box-sizing: border-box;
-            z-index: 2000;
-        }
-
-        .sidebar h2 { 
-            color: #fff; 
-            font-size: 1.2rem; 
-            margin-bottom: 30px; 
-            border-bottom: 1px solid #333;
-            padding-bottom: 10px;
-        }
-
-        .nav-item { 
-            color: #888; 
-            padding: 12px 15px; 
-            cursor: pointer; 
-            border-radius: 8px;
-            margin-bottom: 5px;
-            transition: 0.3s;
-        }
-        .nav-item:hover { background: #222; color: #fff; }
-        .nav-item.active { background: #006400; color: #fff; }
-
-        /* MAIN CONTENT AREA */
-        .main-container {
-            margin-left: 240px; /* Aligns with Sidebar width */
-            width: calc(100% - 240px);
-            min-height: 100vh;
-            display: flex;
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #000; 
+            margin: 0; 
+            display: flex; 
             flex-direction: column;
+            align-items: center; 
+            color: white; 
+            min-height: 100vh;
         }
 
-        /* TOP NAV (CENTERED WITHIN MAIN AREA) */
+        /* TOP STATUS BAR - FIXED */
         .top-nav {
-            width: 100%;
-            height: 60px;
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            height: 70px;
             background: #111;
             display: flex;
-            justify-content: center; /* Centers the battery box */
+            justify-content: center;
             align-items: center;
             border-bottom: 1px solid #333;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
+            z-index: 2000;
         }
 
         .status-wrapper { display: flex; align-items: center; gap: 15px; }
 
         /* Battery Box Styling */
         .battery-box {
-            padding: 6px 20px;
-            border-radius: 6px;
+            padding: 8px 25px;
+            border-radius: 10px;
             font-weight: bold;
-            font-size: 1.6rem;
-            min-width: 85px;
+            font-size: 1.8rem;
+            min-width: 90px;
             text-align: center;
-            transition: all 0.4s ease;
+            transition: 0.4s;
         }
-
-        /* Online: Dark Green Text, Light Green Box */
         .online { background-color: #90ee90; color: #006400; }
-        
-        /* Offline: Dark Red Text, Light Red Box */
         .offline { background-color: #ffcccb; color: #8b0000; }
 
-        /* Symbols beside the box */
-        .state-icon { font-size: 1.8rem; display: none; }
-        #charging-icon { color: #f1c40f; } /* Yellow Bolt */
-        #unplugged-icon { color: #2ecc71; } /* Green Battery */
-        
-        .page-content { padding: 40px; text-align: center; color: #555; }
+        .state-icon { font-size: 2rem; display: none; }
+        #charging-icon { color: #f1c40f; } 
+        #unplugged-icon { color: #2ecc71; }
+
+        /* CENTERED MENU GRID */
+        .menu-container {
+            display: grid;
+            /* Creates 3 columns for desktop, 2 for mobile */
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 20px;
+            margin-top: 100px;
+            margin-bottom: 50px;
+            width: 90%;
+            max-width: 900px;
+        }
+
+        /* Large Square Menu Box */
+        .menu-box {
+            background: #111;
+            border: 1px solid #333;
+            aspect-ratio: 1 / 1;
+            border-radius: 15px; /* Small rounded corners */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .menu-box:hover {
+            background: #1a1a1a;
+            border-color: #90ee90;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+
+        .menu-box.active {
+            border-color: #27ae60;
+            background: #001a00;
+        }
+
+        .menu-logo {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+
+        .menu-name {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+            padding: 0 10px;
+        }
+
+        .menu-box:hover .menu-name { color: #fff; }
+
+        h2.panel-title {
+            margin-top: 100px;
+            color: #555;
+            letter-spacing: 3px;
+        }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <h2>CONTROL PANEL</h2>
-        <div class="nav-item active">DASHBOARD</div>
-        <div class="nav-item">SMS</div>
-        <div class="nav-item">CALLS</div>
-        <div class="nav-item">LOCATION</div>
-        <div class="nav-item">PICTURES</div>
-        <div class="nav-item">SITE WEB</div>
-        <div class="nav-item">REMOTE CONTROL</div>
-        <div class="nav-item">LIVE VIEWING</div>
-        <div class="nav-item">FILE EXPLORER</div>
-        <div class="nav-item">CONTACTS</div>
+    <div class="top-nav">
+        <div class="status-wrapper">
+            <div id="bat-box" class="battery-box offline">
+                <span id="bat-pct">--</span>%
+            </div>
+            <span id="charging-icon" class="state-icon">⚡</span>
+            <span id="unplugged-icon" class="state-icon">🔋</span>
+        </div>
     </div>
 
-    <div class="main-container">
-        <div class="top-nav">
-            <div class="status-wrapper">
-                <div id="bat-box" class="battery-box offline">
-                    <span id="bat-pct">--</span>%
-                </div>
-                
-                <span id="charging-icon" class="state-icon">⚡</span>
-                <span id="unplugged-icon" class="state-icon">🔋</span>
-            </div>
-        </div>
+    <h2 class="panel-title">CONTROL PANEL</h2>
 
-        <div class="page-content">
-            <h3>System Active</h3>
-            <p>Percentage is centered and aligned with the sidebar.</p>
+    <div class="menu-container">
+        <div class="menu-box active">
+            <div class="menu-logo">📊</div>
+            <div class="menu-name">Dashboard</div>
+        </div>
+        <div class="menu-box">
+            <div class="menu-logo">💬</div>
+            <div class="menu-name">SMS</div>
+        </div>
+        <div class="menu-box">
+            <div class="menu-logo">📞</div>
+            <div class="menu-name">Calls</div>
+        </div>
+        <div class="menu-box">
+            <div class="menu-logo">📍</div>
+            <div class="menu-name">Location</div>
+        </div>
+        <div class="menu-box">
+            <div class="menu-logo">🖼️</div>
+            <div class="menu-name">Pictures</div>
+        </div>
+        <div class="menu-box">
+            <div class="menu-logo">🌐</div>
+            <div class="menu-name">Site Web</div>
+        </div>
+        <div class="menu-box">
+            <div class="menu-logo">🎮</div>
+            <div class="menu-name">Remote Control</div>
+        </div>
+        <div class="menu-box">
+            <div class="menu-logo">👁️</div>
+            <div class="menu-name">Live Viewing</div>
+        </div>
+        <div class="menu-box">
+            <div class="menu-logo">📂</div>
+            <div class="menu-name">File Explorer</div>
+        </div>
+        <div class="menu-box">
+            <div class="menu-logo">👤</div>
+            <div class="menu-name">Contacts</div>
         </div>
     </div>
 
@@ -142,7 +187,6 @@
         });
 
         socket.on('ui-battery', (data) => {
-            // SMART FIX: Handle if data is just a number (85) or an object
             let finalPercent;
             let isCharging = false;
 
@@ -150,24 +194,16 @@
                 finalPercent = data.percent;
                 isCharging = data.charging;
             } else {
-                finalPercent = data; // If only number 85 is received
+                finalPercent = data;
             }
 
-            // Update display
             batPct.innerText = finalPercent;
             batBox.className = "battery-box online";
 
-            // Update Symbols
-            if (typeof data === 'object') {
-                if (isCharging) {
-                    chargingIcon.style.display = "inline";
-                    unpluggedIcon.style.display = "none";
-                } else {
-                    chargingIcon.style.display = "none";
-                    unpluggedIcon.style.display = "inline";
-                }
+            if (isCharging) {
+                chargingIcon.style.display = "inline";
+                unpluggedIcon.style.display = "none";
             } else {
-                // Default to Battery icon if only number is sent
                 chargingIcon.style.display = "none";
                 unpluggedIcon.style.display = "inline";
             }
