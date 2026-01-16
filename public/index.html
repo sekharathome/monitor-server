@@ -1,98 +1,48 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Device Control Panel</title>
+    <title>Status Monitor</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: sans-serif; background: #121212; color: white; margin: 0; }
-        
-        /* THE TOP ROW */
-        .top-row { 
-            display: flex; justify-content: space-between; align-items: center;
-            background: #1e1e1e; padding: 15px 30px; border-bottom: 2px solid #333;
-        }
-        .status-badge { padding: 5px 15px; border-radius: 20px; font-weight: bold; }
-        .online { background: #27ae60; }
-        .offline { background: #c0392b; }
-        .battery-text { font-size: 1.2em; color: #f1c40f; font-weight: bold; }
-
-        .main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; }
-        .card { background: #1e1e1e; padding: 15px; border-radius: 8px; }
-        #screen-view { width: 100%; background: #000; border-radius: 5px; }
-        .scroll-area { height: 200px; overflow-y: auto; background: #000; padding: 10px; border-radius: 5px; }
-        button { padding: 8px 12px; cursor: pointer; border-radius: 4px; border: none; background: #3498db; color: white; margin: 5px 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #000; color: white; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .monitor-card { background: #111; padding: 40px; border-radius: 15px; border: 1px solid #333; width: 400px; text-align: center; }
+        .status-badge { display: inline-block; padding: 10px 20px; border-radius: 30px; font-weight: bold; margin-bottom: 20px; }
+        .online { background: #27ae60; box-shadow: 0 0 15px #27ae60; }
+        .offline { background: #c0392b; box-shadow: 0 0 15px #c0392b; }
+        .battery-level { font-size: 3rem; color: #f1c40f; }
+        .label { color: #888; font-size: 0.9rem; margin-top: 5px; }
     </style>
 </head>
 <body>
 
-    <div class="top-row">
-        <div>
-            Status: <span id="status-tag" class="status-badge offline">OFFLINE</span>
-        </div>
-        <div class="battery-text">
-            🔋 Battery: <span id="bat-level">--</span>%
-        </div>
-    </div>
-
-    <div class="main-content">
-        <div class="card">
-            <h3>Live Screen</h3>
-            <img id="screen-view" src="">
-            <button onclick="send('start-screen')">Start Stream</button>
-            <button onclick="send('stop-screen')" style="background:#e74c3c">Stop</button>
-        </div>
-
-        <div class="card">
-            <h3>File Explorer</h3>
-            <button onclick="send('list-files:/storage/emulated/0')">Load Internal Storage</button>
-            <div id="file-box" class="scroll-area"></div>
-        </div>
+    <div class="monitor-card">
+        <div id="status-tag" class="status-badge offline">DEVICE OFFLINE</div>
+        
+        <div class="battery-level"><span id="bat-pct">--</span>%</div>
+        <div class="label">Current Battery Life</div>
     </div>
 
     <script>
         const socket = io();
 
-        function send(cmd) { socket.emit('command', cmd); }
-
-        // LISTEN FOR STATUS
         socket.on('device-status', (status) => {
-            const el = document.getElementById('status-tag');
+            const tag = document.getElementById('status-tag');
             if(status.online) {
-                el.innerText = "ONLINE";
-                el.className = "status-badge online";
+                tag.innerText = "DEVICE ONLINE";
+                tag.className = "status-badge online";
             } else {
-                el.innerText = "OFFLINE";
-                el.className = "status-badge offline";
-                document.getElementById('bat-level').innerText = "--";
+                tag.innerText = "DEVICE OFFLINE";
+                tag.className = "status-badge offline";
+                document.getElementById('bat-pct').innerText = "--";
             }
         });
 
-        // LISTEN FOR BATTERY (Matches your MonitorService.java logic)
-        socket.on('ui-battery', (level) => {
-            document.getElementById('bat-level').innerText = level;
-            // If online but showing offline, force update
-            document.getElementById('status-tag').innerText = "ONLINE";
-            document.getElementById('status-tag').className = "status-badge online";
-        });
-
-        // SCREEN STREAM
-        socket.on('data-stream', (b64) => {
-            document.getElementById('screen-view').src = "data:image/jpeg;base64," + b64;
-        });
-
-        // FILES
-        socket.on('file-list', (json) => {
-            const files = JSON.parse(json);
-            const box = document.getElementById('file-box');
-            box.innerHTML = '';
-            files.forEach(f => {
-                const item = document.createElement('div');
-                item.style.padding = "5px; cursor:pointer; color:#3498db;";
-                item.innerText = (f.isDir ? "📁 " : "📄 ") + f.name;
-                item.onclick = () => f.isDir ? send('list-files:' + f.path) : send('download:' + f.path);
-                box.appendChild(item);
-            });
+        socket.on('ui-battery', (percent) => {
+            document.getElementById('bat-pct').innerText = percent;
+            // Also ensure tag shows online
+            const tag = document.getElementById('status-tag');
+            tag.innerText = "DEVICE ONLINE";
+            tag.className = "status-badge online";
         });
     </script>
 </body>
