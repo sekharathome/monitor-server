@@ -16,18 +16,16 @@ const io = new Server(server, {
 io.on('connection', (socket) => {
     console.log(`Device Connected: ${socket.id}`);
     
-    // Broadcast Online status to UI
+    // Immediately tell the web that a device is online
     socket.broadcast.emit('device-status', { online: true });
 
-    // Handle Battery Object: { percent: number, charging: boolean }
+    // Relay the battery number (e.g., 85) directly to the web
     socket.on('battery-status', (data) => {
-        console.log("Battery Update Received:", data);
         socket.broadcast.emit('ui-battery', data);
     });
 
     socket.on('disconnect', () => {
-        console.log("Device Disconnected");
-        // Broadcast Offline status to UI
+        console.log("Device Offline");
         socket.broadcast.emit('device-status', { online: false });
     });
 });
