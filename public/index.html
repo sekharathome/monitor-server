@@ -44,8 +44,7 @@
 
     <div class="main-content">
         <h3>System Dashboard Active</h3>
-        <p>Waiting for device data...</p>
-    </div>
+        </div>
 
     <script>
         const socket = io();
@@ -56,10 +55,10 @@
             
             if(status.online) {
                 dot.className = "indicator online-dot";
-                text.innerText = "DEVICE ONLINE";
+                text.innerText = "ONLINE";
             } else {
                 dot.className = "indicator offline-dot";
-                text.innerText = "DEVICE OFFLINE";
+                text.innerText = "OFFLINE";
                 document.getElementById('bat-pct').innerText = "--";
                 document.getElementById('charging-bolt').style.display = "none";
             }
@@ -77,8 +76,9 @@
             const dot = document.getElementById('status-dot');
             const text = document.getElementById('status-text');
             dot.className = "indicator online-dot";
-            text.innerText = "DEVICE ONLINE";
+            text.innerText = "ONLINE";
         });
     </script>
 </body>
 </html>
+
