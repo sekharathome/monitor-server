@@ -1,117 +1,115 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Status Monitor</title>
+    <title>Battery Monitor</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #000; color: white; margin: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #000; margin: 0; }
 
-        /* FIXED TOP BAR */
-        .top-bar {
+        /* FIXED TOP ROW */
+        .top-nav {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
+            top: 0; left: 0; width: 100%;
             height: 60px;
             background: #111;
             display: flex;
-            justify-content: center; /* Center the status group */
+            justify-content: center;
             align-items: center;
             border-bottom: 1px solid #333;
             z-index: 1000;
         }
 
-        .status-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+        .status-wrapper { display: flex; align-items: center; gap: 15px; }
 
-        /* The Box that replaces "Online/Offline" text */
+        /* Battery Box */
         .battery-box {
-            padding: 8px 20px;
+            padding: 6px 20px;
             border-radius: 6px;
             font-weight: bold;
-            font-size: 1.4rem;
-            transition: all 0.4s ease;
-            min-width: 60px;
-            text-align: center;
-        }
-
-        /* Colors for the box */
-        .online { 
-            background-color: #27ae60; /* Green */
-            color: #fff;
-            box-shadow: 0 0 10px rgba(39, 174, 96, 0.3);
-        }
-        .offline { 
-            background-color: #c0392b; /* Red */
-            color: #fff;
-        }
-
-        /* Charging Bolt Icon */
-        #charging-bolt {
             font-size: 1.6rem;
-            color: #f1c40f;
-            display: none; /* Hidden by default */
-            filter: drop-shadow(0 0 5px #f1c40f);
+            min-width: 80px;
+            text-align: center;
+            transition: background 0.4s, color 0.4s;
         }
 
-        .main-content {
-            padding-top: 80px; /* Space for the fixed bar */
-            text-align: center;
-            color: #555;
+        /* ONLINE: Dark Green Text, Light Green Box */
+        .online { background-color: #90ee90; color: #006400; }
+        
+        /* OFFLINE: Dark Red Text, Light Red Box */
+        .offline { background-color: #ffcccb; color: #8b0000; }
+
+        /* Icon Styling */
+        .state-icon { 
+            font-size: 1.8rem; 
+            display: none; 
+            transition: opacity 0.3s ease;
         }
+        
+        #charging-icon { color: #f1c40f; } /* Yellow for Power */
+        #unplugged-icon { color: #2ecc71; } /* Green for Battery */
+        
+        .main { padding-top: 100px; color: #444; text-align: center; }
     </style>
 </head>
 <body>
 
-    <div class="top-bar">
-        <div class="status-container">
-            <div id="status-box" class="battery-box offline">
+    <div class="top-nav">
+        <div class="status-wrapper">
+            <div id="bat-box" class="battery-box offline">
                 <span id="bat-pct">--</span>%
             </div>
             
-            <span id="charging-bolt">⚡</span>
+            <span id="charging-icon" class="state-icon">⚡</span>
+            <span id="unplugged-icon" class="state-icon">🔋</span>
         </div>
     </div>
 
-    <div class="main-content">
-        <h2>Dashboard Content</h2>
-        <p>Device status and battery are pinned to the top.</p>
+    <div class="main">
+        <p>Real-time Status Feed</p>
     </div>
 
     <script>
         const socket = io();
-        const box = document.getElementById('status-box');
-        const pctText = document.getElementById('bat-pct');
-        const bolt = document.getElementById('charging-bolt');
+        const batBox = document.getElementById('bat-box');
+        const batPct = document.getElementById('bat-pct');
+        const chargingIcon = document.getElementById('charging-icon');
+        const unpluggedIcon = document.getElementById('unplugged-icon');
 
-        // Handle Online/Offline Status
+        // Handle Connection Status
         socket.on('device-status', (status) => {
-            if(status.online) {
-                box.className = "battery-box online";
+            if (status.online) {
+                batBox.className = "battery-box online";
             } else {
-                box.className = "battery-box offline";
-                pctText.innerText = "--";
-                bolt.style.display = "none";
+                batBox.className = "battery-box offline";
+                batPct.innerText = "--";
+                chargingIcon.style.display = "none";
+                unpluggedIcon.style.display = "none";
             }
         });
 
         // Handle Battery Data
         socket.on('ui-battery', (data) => {
-            // Check if data is a number (85) or an object ({percent: 85, charging: true})
-            let percentage = (typeof data === 'object') ? data.percent : data;
-            let isCharging = (typeof data === 'object') ? data.charging : false;
+            // Logic to handle if 'data' is a number (85) or an object ({percent: 85, charging: true})
+            const percentage = (typeof data === 'object') ? data.percent : data;
+            const isCharging = (typeof data === 'object') ? data.charging : false;
 
-            // Update Percentage
-            pctText.innerText = percentage;
+            batPct.innerText = percentage;
+            batBox.className = "battery-box online";
 
-            // Update Status to Online (since we are receiving data)
-            box.className = "battery-box online";
-
-            // Show/Hide charging bolt beside the box
-            bolt.style.display = isCharging ? "inline" : "none";
+            // Symbol Switching Logic
+            if (typeof data === 'object') {
+                if (isCharging) {
+                    chargingIcon.style.display = "inline";
+                    unpluggedIcon.style.display = "none";
+                } else {
+                    chargingIcon.style.display = "none";
+                    unpluggedIcon.style.display = "inline";
+                }
+            } else {
+                // Default to unplugged battery icon if only a number is received
+                chargingIcon.style.display = "none";
+                unpluggedIcon.style.display = "inline";
+            }
         });
     </script>
 </body>
