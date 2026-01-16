@@ -54,31 +54,31 @@
             const text = document.getElementById('status-text');
             
             if(status.online) {
-                dot.className = "indicator online-dot";
+                dot.className = "status-badge online";
                 text.innerText = "ONLINE";
             } else {
-                dot.className = "indicator offline-dot";
+                dot.className = "status-badge offline";
                 text.innerText = "OFFLINE";
                 document.getElementById('bat-pct').innerText = "--";
                 document.getElementById('charging-bolt').style.display = "none";
             }
         });
 
-        socket.on('ui-battery', (data) => {
-            // Update percentage
-            document.getElementById('bat-pct').innerText = data.percent;
+        socket.on('ui-battery', (percent) => {
+           document.getElementById('bat-pct').innerText = percent;
+            // Also ensure tag shows online
+            const tag = document.getElementById('status-tag');
+            tag.innerText = "ONLINE";
+            tag.className = "status-badge online";
             
             // Show/Hide charging bolt
             const bolt = document.getElementById('charging-bolt');
             bolt.style.display = data.charging ? "inline" : "none";
 
-            // If we are getting battery data, the device is online
-            const dot = document.getElementById('status-dot');
-            const text = document.getElementById('status-text');
-            dot.className = "indicator online-dot";
-            text.innerText = "ONLINE";
+         
         });
     </script>
 </body>
 </html>
+
 
