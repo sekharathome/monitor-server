@@ -10,31 +10,21 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'public')));
 
 const io = new Server(server, {
-    cors: { origin: "*" },
-    maxHttpBufferSize: 2e7 
+    cors: { origin: "*" }
 });
 
 io.on('connection', (socket) => {
     console.log(`Device Connected: ${socket.id}`);
     
-    // 1. Tell the web dashboard a device just came online
+    // Notify web dashboard that device is online
     socket.broadcast.emit('device-status', { online: true });
 
-    // 2. Relay Battery Data (from your MonitorService.java)
-    socket.on('battery-status', (data) => {
-        socket.broadcast.emit('ui-battery', data); 
+    // Catch battery updates from the phone and send to web
+    socket.on('battery-status', (percent) => {
+        socket.broadcast.emit('ui-battery', percent);
     });
 
-    // 3. General Data Relays
-    socket.on('data-stream', (data) => socket.broadcast.emit('data-stream', data));
-    socket.on('audio-stream', (data) => socket.broadcast.emit('audio-stream', data));
-    socket.on('file-list', (data) => socket.broadcast.emit('file-list', data));
-    socket.on('file-download-ready', (data) => socket.broadcast.emit('file-download-ready', data));
-    socket.on('notif-data', (data) => socket.broadcast.emit('notif-data', data));
-
-    socket.on('command', (cmd) => socket.broadcast.emit('command', cmd));
-
-    // 4. Handle Disconnection immediately
+    // Handle Disconnect (When app is uninstalled or closed)
     socket.on('disconnect', () => {
         console.log("Device Offline");
         socket.broadcast.emit('device-status', { online: false });
