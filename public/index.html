@@ -6,78 +6,49 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #000; margin: 0; display: flex; }
 
-        /* SIDEBAR STYLING */
+        /* SIDEBAR */
         .sidebar {
-            width: 240px;
-            height: 100vh;
-            background: #111;
-            border-right: 1px solid #333;
-            position: fixed;
-            left: 0;
-            top: 0;
-            padding: 20px;
-            box-sizing: border-box;
+            width: 240px; height: 100vh; background: #111;
+            border-right: 1px solid #333; position: fixed;
+            left: 0; top: 0; padding: 20px; box-sizing: border-box;
         }
+        .sidebar h2 { color: #fff; font-size: 1.2rem; }
 
-        .sidebar h2 { color: #fff; font-size: 1.2rem; margin-bottom: 30px; }
-        .nav-item { color: #888; padding: 10px 0; cursor: pointer; border-bottom: 1px solid #222; }
-        .nav-item:hover { color: #fff; }
-
-        /* MAIN CONTENT AREA */
+        /* MAIN CONTENT */
         .main-container {
-            margin-left: 240px; /* Width of the sidebar */
-            width: calc(100% - 240px);
-            min-height: 100vh;
+            margin-left: 240px; width: calc(100% - 240px); min-height: 100vh;
         }
 
-        /* TOP NAV (CENTERED WITHIN MAIN CONTENT) */
+        /* TOP NAV */
         .top-nav {
-            width: 100%;
-            height: 60px;
-            background: #111;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-bottom: 1px solid #333;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
+            width: 100%; height: 60px; background: #111;
+            display: flex; justify-content: center; align-items: center;
+            border-bottom: 1px solid #333; position: sticky; top: 0;
         }
 
         .status-wrapper { display: flex; align-items: center; gap: 15px; }
 
         /* Battery Box */
         .battery-box {
-            padding: 6px 20px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 1.6rem;
-            min-width: 80px;
-            text-align: center;
-            transition: background 0.4s, color 0.4s;
+            padding: 6px 20px; border-radius: 6px;
+            font-weight: bold; font-size: 1.6rem; min-width: 80px;
+            text-align: center; transition: 0.4s;
         }
 
-        /* ONLINE: Dark Green Text, Light Green Box */
-        .online { background-color: #90ee90; color: #006400; }
-        
-        /* OFFLINE: Dark Red Text, Light Red Box */
-        .offline { background-color: #ffcccb; color: #8b0000; }
+        /* Colors: Dark Text on Light Background */
+        .online { background-color: #90ee90; color: #006400; } /* Green */
+        .offline { background-color: #ffcccb; color: #8b0000; } /* Red */
 
-        /* Icon Styling */
+        /* Symbols */
         .state-icon { font-size: 1.8rem; display: none; }
-        #charging-icon { color: #f1c40f; } /* Yellow */
-        #unplugged-icon { color: #2ecc71; } /* Green */
-        
-        .page-content { padding: 40px; color: #444; text-align: center; }
+        #charging-icon { color: #f1c40f; } /* Yellow Bolt */
+        #unplugged-icon { color: #2ecc71; } /* Green Battery */
     </style>
 </head>
 <body>
 
     <div class="sidebar">
         <h2>Admin Panel</h2>
-        <div class="nav-item">Dashboard</div>
-        <div class="nav-item">Device Logs</div>
-        <div class="nav-item">Settings</div>
     </div>
 
     <div class="main-container">
@@ -86,15 +57,9 @@
                 <div id="bat-box" class="battery-box offline">
                     <span id="bat-pct">--</span>%
                 </div>
-                
                 <span id="charging-icon" class="state-icon">⚡</span>
                 <span id="unplugged-icon" class="state-icon">🔋</span>
             </div>
-        </div>
-
-        <div class="page-content">
-            <h3>System Active</h3>
-            <p>Monitoring Android Device Battery Status...</p>
         </div>
     </div>
 
@@ -117,22 +82,29 @@
         });
 
         socket.on('ui-battery', (data) => {
-            const percentage = (typeof data === 'object') ? data.percent : data;
-            const isCharging = (typeof data === 'object') ? data.charging : false;
+            // FIX: Detect if data is an object {percent: 85} or just a number 85
+            let finalPercent;
+            let isCharging = false;
 
-            batPct.innerText = percentage;
+            if (typeof data === 'object' && data !== null) {
+                finalPercent = data.percent;
+                isCharging = data.charging;
+            } else {
+                finalPercent = data; // Data is just the number (e.g. 85)
+                isCharging = false;  // Can't know charging status from a number
+            }
+
+            // Update Text
+            batPct.innerText = finalPercent;
+            
+            // Set Color to Online
             batBox.className = "battery-box online";
 
-            if (typeof data === 'object') {
-                if (isCharging) {
-                    chargingIcon.style.display = "inline";
-                    unpluggedIcon.style.display = "none";
-                } else {
-                    chargingIcon.style.display = "none";
-                    unpluggedIcon.style.display = "inline";
-                }
+            // Update Icons
+            if (isCharging) {
+                chargingIcon.style.display = "inline";
+                unpluggedIcon.style.display = "none";
             } else {
-                // If number only, default to battery icon
                 chargingIcon.style.display = "none";
                 unpluggedIcon.style.display = "inline";
             }
