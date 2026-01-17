@@ -200,6 +200,22 @@
     </div>
 
     <script>
+        socket.on('ui-sms', (smsData) => {
+    const smsSection = document.getElementById('sms');
+    let html = '<div class="page-title">SMS Messages</div>';
+    
+    smsData.forEach(msg => {
+        const date = new Date(msg.date).toLocaleString();
+        html += `
+            <div style="background:white; padding:15px; margin-bottom:10px; border-left:5px solid #3498db; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,0.05)">
+                <div style="font-weight:bold; color:#2c3e50;">From: ${msg.address}</div>
+                <div style="margin:5px 0; color:#555;">${msg.body}</div>
+                <div style="font-size:0.8rem; color:#999;">${date}</div>
+            </div>`;
+    });
+    
+    smsSection.innerHTML = html;
+});
         const socket = io();
 
         function showView(viewId) {
@@ -256,3 +272,4 @@
     </script>
 </body>
 </html>
+
