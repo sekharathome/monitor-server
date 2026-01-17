@@ -5,34 +5,32 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const PORT = process.env.PORT || 3000;
+const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-const io = new Server(server, {
-    cors: { origin: "*" }
-});
-
 io.on('connection', (socket) => {
-    console.log(`Device Connected: ${socket.id}`);
-    
-    // Notify web dashboard that device is online
-    socket.broadcast.emit('device-status', { online: true });
+    console.log('Client connected:', socket.id);
 
-    // Catch battery updates (object or number) and send to web
+    // Forward battery data to web
     socket.on('battery-status', (data) => {
         socket.broadcast.emit('ui-battery', data);
     });
-socket.on('sms-logs', (data) => {
-    socket.broadcast.emit('ui-sms', data);
-})
+
+    // Web Dashboard requests SMS from Phone
+    socket.on('get-sms-request', () => {
+        socket.broadcast.emit('get-sms-request');
+    });
+
+    // Phone sends SMS logs to Web
+    socket.on('sms-data-log', (data) => {
+        socket.broadcast.emit('ui-sms-display', data);
+    });
+
     socket.on('disconnect', () => {
-        console.log("Device Offline");
         socket.broadcast.emit('device-status', { online: false });
     });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
-});
-
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`Server on port ${PORT}`));
