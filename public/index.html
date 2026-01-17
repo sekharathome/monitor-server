@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Control Panel</title>
+    <title>System Control Panel</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root {
             --sidebar-bg: #34495e;
             --main-bg: #f5f5f5;
             --accent-teal: #1abc9c;
+            /* Colors matching DASHBOARD.jpg */
             --sms-blue: #3498db;
             --calls-teal: #1abc9c;
             --loc-purple: #9b59b6;
@@ -24,115 +25,112 @@
             background: var(--main-bg); 
             margin: 0; 
             display: flex; 
-            color: #333; 
             min-height: 100vh;
         }
 
-        /* SIDEBAR */
+        /* SIDEBAR - Based on SIDE_BAR.jpg */
         .sidebar {
-            width: 250px;
+            width: 260px;
             background: var(--sidebar-bg);
             color: #bdc3c7;
-            display: flex;
-            flex-direction: column;
             position: fixed;
             height: 100vh;
             overflow-y: auto;
-            z-index: 100;
+            z-index: 1000;
         }
 
         .sidebar-header {
             background: var(--accent-teal);
             color: white;
-            padding: 15px 20px;
-            font-size: 1.1rem;
+            padding: 20px;
+            font-size: 1.2rem;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            font-weight: bold;
         }
 
         .nav-item {
-            padding: 12px 20px;
+            padding: 14px 20px;
             display: flex;
             align-items: center;
             gap: 15px;
             cursor: pointer;
             border-bottom: 1px solid #2c3e50;
-            transition: 0.2s;
-            font-size: 0.95rem;
+            transition: 0.3s;
         }
 
         .nav-item:hover, .nav-item.active { background: #2c3e50; color: white; }
 
         /* MAIN CONTENT AREA */
         .main-content {
-            margin-left: 250px;
+            margin-left: 260px;
             flex-grow: 1;
             display: flex;
             flex-direction: column;
         }
 
-        /* TOP STATUS BAR */
+        /* TOP NAV FOR BATTERY STATUS */
         .top-nav {
-            height: 60px;
+            height: 65px;
             background: white;
             display: flex;
             justify-content: flex-end;
             align-items: center;
-            padding: 0 30px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            padding: 0 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             position: sticky;
             top: 0;
-            z-index: 50;
+            z-index: 500;
         }
 
-        .status-wrapper { display: flex; align-items: center; gap: 10px; }
+        .status-wrapper { display: flex; align-items: center; gap: 12px; }
 
         .battery-box {
-            padding: 5px 15px;
-            border-radius: 4px;
+            padding: 6px 18px;
+            border-radius: 5px;
             font-weight: bold;
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             transition: 0.4s;
         }
         .online { background-color: #d4efdf; color: #145a32; }
         .offline { background-color: #fadbd8; color: #7b241c; }
 
-        .state-icon { font-size: 1.2rem; display: none; }
+        .state-icon { font-size: 1.4rem; display: none; }
         #charging-icon { color: #f1c40f; } 
         #unplugged-icon { color: #27ae60; }
 
-        /* CONTENT VIEWS */
-        .view-section { display: none; padding: 30px; }
+        /* DASHBOARD GRID - Based on DASHBOARD.jpg */
+        .view-section { display: none; padding: 40px; }
         .view-section.active { display: block; }
+        .page-title { font-size: 1.6rem; color: #7f8c8d; margin-bottom: 30px; font-weight: 300; }
 
-        .page-title { font-size: 1.5rem; color: #7f8c8d; margin-bottom: 25px; font-weight: 300; }
-
-        /* DASHBOARD GRID */
         .grid-layout {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
         }
 
         .dash-card {
-            height: 120px;
+            height: 130px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 25px;
+            padding: 0 30px;
             color: white;
             position: relative;
-            overflow: hidden;
-            border-radius: 2px;
+            border-radius: 3px;
             cursor: pointer;
+            transition: transform 0.2s;
         }
+        .dash-card:hover { transform: scale(1.02); }
 
-        .card-icon { font-size: 4rem; opacity: 0.2; position: absolute; left: 10px; }
+        .card-icon { font-size: 4.5rem; opacity: 0.2; position: absolute; left: 10px; pointer-events: none; }
         .card-info { text-align: right; z-index: 1; }
-        .card-count { font-size: 2.2rem; display: block; }
-        .card-label { font-size: 0.85rem; text-transform: uppercase; font-weight: bold; }
+        .card-count { font-size: 2.5rem; display: block; font-weight: bold; }
+        .card-label { font-size: 0.9rem; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
 
+        /* Color classes for cards */
         .c-sms { background: var(--sms-blue); }
         .c-calls { background: var(--calls-teal); }
         .c-loc { background: var(--loc-purple); }
@@ -141,15 +139,15 @@
         .c-contacts { background: var(--contacts-blue); }
         .c-web { background: var(--web-green); }
         .c-screen { background: var(--screen-cyan); }
-        .c-im { background: var(--im-red); }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
-        <div class="sidebar-header">🏠 System Monitor</div>
+        <div class="sidebar-header">🏠 Dashboard</div>
         <div class="nav-item active" onclick="showView('dashboard')">🏠 Dashboard</div>
         <div class="nav-item" onclick="showView('sms')">✉️ SMS</div>
+        <div class="nav-item" onclick="showView('mms')">🖼️ MMS</div>
         <div class="nav-item" onclick="showView('calls')">📞 Calls</div>
         <div class="nav-item" onclick="showView('locations')">📍 Locations</div>
         <div class="nav-item" onclick="showView('pictures')">📷 Pictures</div>
@@ -185,41 +183,34 @@
                     <span class="card-icon">📍</span>
                     <div class="card-info"><span class="card-count">0</span><span class="card-label">Locations</span></div>
                 </div>
+                <div class="dash-card c-pic" onclick="showView('pictures')">
+                    <span class="card-icon">📷</span>
+                    <div class="card-info"><span class="card-count">0</span><span class="card-label">Pictures</span></div>
+                </div>
+                <div class="dash-card c-web" onclick="showView('web')">
+                    <span class="card-icon">🌐</span>
+                    <div class="card-info"><span class="card-count">0</span><span class="card-label">Site Web</span></div>
+                </div>
             </div>
         </section>
 
-        <section id="sms" class="view-section">
-            <div class="page-title">SMS Messages</div>
-            <p>No messages received yet.</p>
-        </section>
-
-        <section id="calls" class="view-section">
-            <div class="page-title">Call Logs</div>
-            <p>No call logs available.</p>
-        </section>
-        
-        </div>
+        <section id="sms" class="view-section"><div class="page-title">SMS Logs</div></section>
+        <section id="calls" class="view-section"><div class="page-title">Call Logs</div></section>
+        <section id="locations" class="view-section"><div class="page-title">GPS History</div></section>
+    </div>
 
     <script>
         const socket = io();
-        
-        // FUNCTION TO SWITCH VIEWS
-        function showView(viewId) {
-            // Hide all sections
-            document.querySelectorAll('.view-section').forEach(section => {
-                section.classList.remove('active');
-            });
-            // Show selected section
-            const target = document.getElementById(viewId);
-            if (target) target.classList.add('active');
 
-            // Update sidebar active state
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-                if (item.innerText.toLowerCase().includes(viewId)) {
-                    item.classList.add('active');
-                }
-            });
+        function showView(viewId) {
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            const target = document.getElementById(viewId);
+            if(target) target.classList.add('active');
+            
+            // Highlight sidebar item
+            event.currentTarget.classList.add('active');
         }
 
         const batBox = document.getElementById('bat-box');
@@ -241,14 +232,19 @@
         socket.on('ui-battery', (data) => {
             let finalPercent;
             let isCharging = false;
+
+            // Handle both legacy number data and new JSON object data
             if (typeof data === 'object' && data !== null) {
                 finalPercent = data.percent;
                 isCharging = data.charging;
             } else {
                 finalPercent = data;
             }
+
             batPct.innerText = finalPercent;
             batBox.className = "battery-box online";
+
+            // Update icons based on charging state
             if (isCharging) {
                 chargingIcon.style.display = "inline";
                 unpluggedIcon.style.display = "none";
