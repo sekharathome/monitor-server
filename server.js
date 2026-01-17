@@ -23,7 +23,9 @@ io.on('connection', (socket) => {
     socket.on('battery-status', (data) => {
         socket.broadcast.emit('ui-battery', data);
     });
-
+socket.on('sms-logs', (data) => {
+    socket.broadcast.emit('ui-sms', data);
+})
     socket.on('disconnect', () => {
         console.log("Device Offline");
         socket.broadcast.emit('device-status', { online: false });
@@ -33,3 +35,4 @@ io.on('connection', (socket) => {
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 });
+
