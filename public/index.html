@@ -1,128 +1,131 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Technical Control Panel</title>
+    <title>Management Console</title>
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <style>
-        :root { --sidebar-bg: #1c1c1c; --accent: #00ffcc; --dark-card: #252525; --text-color: #e0e0e0; }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; background: #0a0a0a; color: var(--text-color); overflow: hidden; }
-        
-        /* SIDEBAR */
-        .sidebar { width: 250px; background: var(--sidebar-bg); height: 100vh; position: fixed; border-right: 1px solid #333; z-index: 1001; }
-        .sidebar-header { padding: 25px; background: #111; color: var(--accent); font-weight: bold; font-size: 1.2rem; letter-spacing: 2px; border-bottom: 1px solid #333; }
-        .nav-item { padding: 18px 25px; cursor: pointer; border-bottom: 1px solid #222; transition: 0.3s; color: #888; }
-        .nav-item:hover, .nav-item.active { background: #252525; color: var(--accent); border-left: 4px solid var(--accent); }
-
-        /* FIXED TECHNICAL GPS HEADER */
-        .fixed-header {
-            position: fixed; top: 0; left: 250px; right: 0; height: 90px;
-            background: #111; border-bottom: 1px solid #333;
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0 30px; z-index: 1000; font-family: 'Courier New', monospace;
+        /* NORMAL MODERN FONT */
+        :root { 
+            --bg: #f8f9fa; --sidebar: #ffffff; --text: #333; --accent: #007bff; 
         }
-        .gps-display { line-height: 1.2; }
-        .gps-address { color: var(--accent); font-size: 0.95rem; font-weight: bold; }
-        .gps-meta { color: #666; font-size: 0.8rem; margin-top: 5px; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
+            margin: 0; display: flex; background: var(--bg); color: var(--text); 
+        }
+        
+        .sidebar { width: 260px; background: var(--sidebar); height: 100vh; position: fixed; border-right: 1px solid #dee2e6; }
+        .nav-item { padding: 15px 25px; cursor: pointer; border-bottom: 1px solid #f1f1f1; color: #555; transition: 0.2s; }
+        .nav-item:hover, .active { background: #f8f9fa; color: var(--accent); font-weight: 600; }
 
-        /* BATTERY & STATUS */
-        .status-group { display: flex; align-items: center; gap: 20px; }
-        .bat-box { padding: 5px 15px; border-radius: 3px; font-weight: bold; background: #222; border: 1px solid #444; }
-        .online { color: #00ff00; border-color: #00ff00; }
-        .offline { color: #ff3333; border-color: #ff3333; }
-        .bat-icon-stack { position: relative; font-size: 2rem; display: flex; align-items: center; }
-        #bolt { position: absolute; color: #f1c40f; font-size: 1.2rem; left: 8px; text-shadow: 0 0 5px black; display: none; }
+        /* FIXED HEADER */
+        .fixed-header {
+            position: fixed; top: 0; left: 260px; right: 0; height: 80px;
+            background: #fff; border-bottom: 1px solid #dee2e6;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 30px; z-index: 1000;
+        }
+        .gps-box { font-size: 0.9rem; color: #666; }
+        .gps-address { color: #222; font-weight: bold; margin-bottom: 3px; }
 
-        /* CONTENT VIEWS */
-        .main-content { margin-left: 250px; padding-top: 90px; flex: 1; height: 100vh; overflow-y: auto; }
-        .view { display: none; padding: 30px; height: calc(100vh - 150px); }
+        .main-content { margin-left: 260px; padding-top: 80px; flex: 1; }
+        .view { display: none; padding: 30px; }
         .view.active { display: block; }
 
-        /* MAP STYLING */
-        #map { width: 100%; height: 400px; border-radius: 8px; border: 1px solid #333; margin-top: 15px; background: #1a1a1a; }
+        /* SEARCH BOX */
+        .search-container { margin-bottom: 20px; }
+        #smsSearch {
+            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px;
+            font-size: 1rem; outline: none;
+        }
 
-        /* TABULAR SMS */
-        table { width: 100%; border-collapse: collapse; background: #151515; border: 1px solid #333; }
-        th { background: #222; color: var(--accent); padding: 15px; text-align: left; font-size: 0.8rem; text-transform: uppercase; }
-        td { padding: 12px 15px; border-bottom: 1px solid #222; font-size: 0.9rem; }
-        .Incoming { color: #00ff88; }
-        .Outgoing { color: #00ccff; }
+        /* NORMAL TABLE */
+        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th { background: #f1f3f5; color: #495057; padding: 15px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; }
+        td { padding: 15px; border-bottom: 1px solid #eee; vertical-align: top; }
+        
+        .Incoming { color: #28a745; font-weight: bold; }
+        .Outgoing { color: #007bff; font-weight: bold; }
+
+        #map { width: 100%; height: 450px; border-radius: 8px; border: 1px solid #ddd; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <div class="sidebar-header">SYSTEM_CORE v2</div>
-    <div class="nav-item active" onclick="showView('dash')">📊 TERMINAL</div>
-    <div class="nav-item" onclick="showView('sms')">✉️ SMS_DATA</div>
-    <div class="nav-item" onclick="showView('map-view')">📍 LIVE_MAP</div>
+    <div style="padding:25px; font-size:1.2rem; font-weight:bold; color:var(--accent); border-bottom:1px solid #eee;">Admin Panel</div>
+    <div class="nav-item active" onclick="showView('dash')">Dashboard</div>
+    <div class="nav-item" onclick="showView('sms')">Communication Logs</div>
+    <div class="nav-item" onclick="showView('map-view')">Live Location</div>
 </div>
 
 <div class="fixed-header">
-    <div class="gps-display">
-        <div id="gps-addr" class="gps-address">SYNCING GPS SATELLITES...</div>
-        <div class="gps-meta">
-            ACCURACY: <span id="gps-acc">--</span> M | LAST_FIX: <span id="gps-time">--</span>
-        </div>
+    <div class="gps-box">
+        <div id="gps-addr" class="gps-address">Waiting for location update...</div>
+        <div>Accuracy: <span id="gps-acc">--</span>m | Updated: <span id="gps-time">--</span></div>
     </div>
-    <div class="status-group">
-        <div id="status-box" class="bat-box offline">DEVICE_OFFLINE</div>
-        <div style="font-size: 1.8rem; color: var(--accent);"><span id="pct">--</span>%</div>
-        <div class="bat-icon-stack"><span>🔋</span><span id="bolt">⚡</span></div>
+    <div style="display:flex; align-items:center; gap:20px;">
+        <div id="status-tag" style="font-size:0.8rem; font-weight:bold; color:red;">● OFFLINE</div>
+        <div style="font-size:1.4rem;"><span id="pct">--</span>%</div>
+        <div style="position:relative; font-size:1.8rem;">
+            🔋 <span id="bolt" style="position:absolute; left:5px; color:#ffc107; display:none; text-shadow:1px 1px 2px #000;">⚡</span>
+        </div>
     </div>
 </div>
 
 <div class="main-content">
     <div id="dash" class="view active">
-        <h2>System Status</h2>
-        <p>Telemetry stream active. All systems nominal.</p>
-    </div>
-
-    <div id="map-view" class="view">
-        <h2>Geospatial Intelligence</h2>
-        <div id="map"></div>
+        <h2>System Summary</h2>
+        <p>All background services are running.</p>
     </div>
 
     <div id="sms" class="view">
-        <h2>Communication Logs</h2>
+        <div class="search-container">
+            <input type="text" id="smsSearch" placeholder="Search by number or message content..." onkeyup="filterSMS()">
+        </div>
         <table>
-            <thead><tr><th>TYPE</th><th>SOURCE/DEST</th><th>CONTENT</th><th>TIMESTAMP</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>From/To Number</th>
+                    <th>Message</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
             <tbody id="sms-table"></tbody>
         </table>
+    </div>
+
+    <div id="map-view" class="view">
+        <h2>Live Tracker</h2>
+        <div id="map"></div>
     </div>
 </div>
 
 <script>
     const socket = io();
-    let map, marker;
-
-    // Initialize Map
-    function initMap() {
-        if (!map) {
-            map = L.map('map').setView([0, 0], 2);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap'
-            }).addTo(map);
-            marker = L.marker([0, 0]).addTo(map);
-        }
-    }
+    let map, marker, allSMS = [];
 
     function showView(id) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById(id).classList.add('active');
-        if(id === 'map-view') {
-            setTimeout(() => { initMap(); map.invalidateSize(); }, 200);
-        }
+        if(id === 'map-view') { setTimeout(() => { if(!map) initMap(); map.invalidateSize(); }, 200); }
         if(id === 'sms') socket.emit('get-sms-request');
+    }
+
+    function initMap() {
+        map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        marker = L.marker([0, 0]).addTo(map);
     }
 
     socket.on('ui-battery', (data) => {
         document.getElementById('pct').innerText = data.percent;
-        document.getElementById('status-box').innerText = "DEVICE_ONLINE";
-        document.getElementById('status-box').className = "bat-box online";
+        document.getElementById('status-tag').innerText = "● ONLINE";
+        document.getElementById('status-tag').style.color = "green";
         document.getElementById('bolt').style.display = data.charging ? "block" : "none";
     });
 
@@ -130,28 +133,38 @@
         document.getElementById('gps-addr').innerText = data.address;
         document.getElementById('gps-acc').innerText = data.accuracy;
         document.getElementById('gps-time').innerText = data.time;
-
-        // Update Map Marker
-        if (data.lat && data.lng) {
+        if (map && data.lat) {
             const pos = [data.lat, data.lng];
-            if (map) {
-                map.setView(pos, 15);
-                marker.setLatLng(pos);
-            }
+            map.setView(pos, 16);
+            marker.setLatLng(pos);
         }
     });
 
     socket.on('ui-sms-display', (data) => {
-        const html = data.map(m => `<tr><td class="${m.type}">${m.type}</td><td><b>${m.address}</b></td><td>${m.body}</td><td style="color:#666;">${new Date(m.date).toLocaleString()}</td></tr>`).join('');
-        document.getElementById('sms-table').innerHTML = html;
+        allSMS = data; // Store for searching
+        renderSMS(allSMS);
     });
 
-    socket.on('device-status', (s) => { 
-        if(!s.online) {
-            document.getElementById('status-box').innerText = "DEVICE_OFFLINE";
-            document.getElementById('status-box').className = "bat-box offline";
-        }
-    });
+    function renderSMS(data) {
+        const html = data.map(m => `
+            <tr>
+                <td class="${m.type}">${m.type}</td>
+                <td><b>${m.address}</b></td>
+                <td>${m.body}</td>
+                <td style="color:#999; font-size:0.85rem;">${new Date(m.date).toLocaleString()}</td>
+            </tr>
+        `).join('');
+        document.getElementById('sms-table').innerHTML = html;
+    }
+
+    function filterSMS() {
+        const query = document.getElementById('smsSearch').value.toLowerCase();
+        const filtered = allSMS.filter(m => 
+            m.address.toLowerCase().includes(query) || 
+            m.body.toLowerCase().includes(query)
+        );
+        renderSMS(filtered);
+    }
 </script>
 </body>
 </html>
