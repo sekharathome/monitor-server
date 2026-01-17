@@ -16,10 +16,10 @@ const io = new Server(server, {
 io.on('connection', (socket) => {
     console.log(`Device Connected: ${socket.id}`);
     
-    // Tell web dashboard a device just connected
+    // Notify web dashboard that device is online
     socket.broadcast.emit('device-status', { online: true });
 
-    // Catch battery updates (can be a number or an object)
+    // Catch battery updates (object or number) and send to web
     socket.on('battery-status', (data) => {
         socket.broadcast.emit('ui-battery', data);
     });
