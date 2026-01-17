@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Control Panel</title>
+    <title>System Control Panel</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root {
@@ -11,59 +11,102 @@
         body { font-family: 'Segoe UI', sans-serif; background: var(--main-bg); margin: 0; display: flex; }
 
         /* SIDEBAR */
-        .sidebar { width: 250px; background: var(--sidebar-bg); color: #bdc3c7; position: fixed; height: 100vh; }
+        .sidebar { width: 250px; background: var(--sidebar-bg); color: #bdc3c7; position: fixed; height: 100vh; z-index: 1000;}
         .sidebar-header { background: var(--accent); color: white; padding: 20px; font-weight: bold; }
         .nav-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #2c3e50; transition: 0.3s; }
         .nav-item:hover, .nav-item.active { background: #2c3e50; color: white; }
 
         /* CONTENT */
         .main-content { margin-left: 250px; flex-grow: 1; }
-        .top-nav { height: 60px; background: white; display: flex; justify-content: flex-end; align-items: center; padding: 0 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .top-nav { height: 70px; background: white; display: flex; justify-content: flex-end; align-items: center; padding: 0 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 500;}
         
-        /* BATTERY */
-        .battery-box { padding: 5px 15px; border-radius: 4px; font-weight: bold; margin-right: 10px; }
+        /* TECHNICAL BATTERY STACKING */
+        .battery-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .battery-box { 
+            padding: 6px 15px; border-radius: 5px; font-weight: bold; font-size: 1.2rem; 
+        }
         .online { background: #d4efdf; color: #145a32; }
         .offline { background: #fadbd8; color: #7b241c; }
-        #charging-icon, #unplugged-icon { font-size: 1.5rem; display: none; }
 
-        /* GRID */
+        .icon-stack {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+        }
+        #unplugged-icon { color: #27ae60; }
+        #charging-bolt {
+            position: absolute;
+            font-size: 1.4rem;
+            color: #f1c40f;
+            display: none; /* Controlled by JS */
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* GRID DASHBOARD */
         .view-section { display: none; padding: 30px; }
         .view-section.active { display: block; }
         .grid-layout { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
-        .dash-card { height: 100px; padding: 20px; color: white; border-radius: 3px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        
-        /* SMS LIST */
-        .sms-item { background: white; padding: 15px; margin-bottom: 10px; border-left: 5px solid var(--blue); border-radius: 4px; color: #333; }
+        .dash-card { height: 120px; padding: 20px; color: white; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.3s;}
+        .dash-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .sms-item { background: white; padding: 15px; margin-bottom: 10px; border-left: 5px solid var(--blue); border-radius: 4px; color: #333; box-shadow: 0 2px 5px rgba(0,0,0,0.05);}
     </style>
 </head>
 <body>
 
     <div class="sidebar">
-        <div class="sidebar-header">🏠 System Admin</div>
+        <div class="sidebar-header">🏠 SYSTEM ADMIN</div>
         <div class="nav-item active" onclick="showView('dashboard')">🏠 Dashboard</div>
         <div class="nav-item" onclick="showView('sms')">✉️ SMS Logs</div>
-        <div class="nav-item">📞 Call Logs</div>
+        <div class="nav-item">🖼️ MMS</div>
+        <div class="nav-item">📞 Calls</div>
+        <div class="nav-item">📍 Locations</div>
+        <div class="nav-item">📷 Pictures</div>
+        <div class="nav-item">🎮 Apps</div>
+        <div class="nav-item">📖 Contacts</div>
+        <div class="nav-item">🌐 Site Web</div>
+        <div class="nav-item">📂 File Explorer</div>
     </div>
 
     <div class="main-content">
         <div class="top-nav">
-            <div id="bat-box" class="battery-box offline"><span id="bat-pct">--</span>%</div>
-            <span id="charging-icon" style="color:#f1c40f">⚡</span>
-            <span id="unplugged-icon" style="color:#27ae60">🔋</span>
+            <div class="battery-container">
+                <div id="bat-box" class="battery-box offline"><span id="bat-pct">--</span>%</div>
+                <div class="icon-stack">
+                    <span id="unplugged-icon">🔋</span>
+                    <span id="charging-bolt">⚡</span>
+                </div>
+            </div>
         </div>
 
         <section id="dashboard" class="view-section active">
-            <h2>Dashboard</h2>
+            <h2 style="color: #7f8c8d; font-weight: 300;">Dashboard</h2>
             <div class="grid-layout">
                 <div class="dash-card" style="background:var(--blue)" onclick="showView('sms')">
-                    <span>✉️ SMS</span><span id="sms-count" style="font-size: 2rem;">0</span>
+                    <div style="font-size: 3rem; opacity: 0.3;">✉️</div>
+                    <div style="text-align: right;">
+                        <span id="sms-count" style="font-size: 2.5rem; display: block; font-weight: bold;">0</span>
+                        <span style="font-size: 0.8rem; font-weight: bold;">SMS LOGS</span>
+                    </div>
                 </div>
             </div>
         </section>
 
         <section id="sms" class="view-section">
-            <h2>SMS Messages</h2>
-            <div id="sms-container">Connecting to device...</div>
+            <h2 style="color: #7f8c8d; font-weight: 300;">SMS Messages</h2>
+            <div id="sms-container">Waiting for device data...</div>
         </section>
     </div>
 
@@ -72,17 +115,24 @@
 
         function showView(viewId) {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
+            
+            // Set clicked sidebar item as active
+            event.currentTarget.classList.add('active');
+
             if(viewId === 'sms') socket.emit('get-sms-request');
         }
 
         socket.on('ui-battery', (data) => {
             const pct = (typeof data === 'object') ? data.percent : data;
             const charging = (typeof data === 'object') ? data.charging : false;
+            
             document.getElementById('bat-pct').innerText = pct;
             document.getElementById('bat-box').className = "battery-box online";
-            document.getElementById('charging-icon').style.display = charging ? "inline" : "none";
-            document.getElementById('unplugged-icon').style.display = charging ? "none" : "inline";
+            
+            // Show bolt overlaying the battery if charging
+            document.getElementById('charging-bolt').style.display = charging ? "block" : "none";
         });
 
         socket.on('ui-sms-display', (smsArray) => {
@@ -90,10 +140,19 @@
             const container = document.getElementById('sms-container');
             container.innerHTML = smsArray.map(m => `
                 <div class="sms-item">
-                    <strong>${m.address}</strong><br>${m.body}<br>
-                    <small>${new Date(m.date).toLocaleString()}</small>
+                    <strong>${m.address}</strong><br>
+                    <span style="display:block; margin: 5px 0;">${m.body}</span>
+                    <small style="color: #999;">${new Date(m.date).toLocaleString()}</small>
                 </div>
             `).join('');
+        });
+
+        socket.on('device-status', (status) => {
+            if (!status.online) {
+                document.getElementById('bat-box').className = "battery-box offline";
+                document.getElementById('bat-pct').innerText = "--";
+                document.getElementById('charging-bolt').style.display = "none";
+            }
         });
     </script>
 </body>
