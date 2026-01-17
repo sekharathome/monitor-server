@@ -1,136 +1,157 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Control Panel</title>
+    <title>Technical Control Panel</title>
     <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <style>
-        :root {
-            --sidebar-bg: #2c3e50; --main-bg: #ecf0f1; --accent: #1abc9c;
-            --blue: #2980b9; --dark: #34495e;
-        }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--main-bg); margin: 0; display: flex; }
-
+        :root { --sidebar-bg: #1c1c1c; --accent: #00ffcc; --dark-card: #252525; --text-color: #e0e0e0; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; background: #0a0a0a; color: var(--text-color); overflow: hidden; }
+        
         /* SIDEBAR */
-        .sidebar { width: 250px; background: var(--sidebar-bg); color: #ecf0f1; position: fixed; height: 100vh; }
-        .sidebar-header { background: var(--accent); color: white; padding: 20px; font-weight: bold; text-align: center; }
-        .nav-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #34495e; transition: 0.3s; }
-        .nav-item:hover, .nav-item.active { background: #34495e; color: var(--accent); }
+        .sidebar { width: 250px; background: var(--sidebar-bg); height: 100vh; position: fixed; border-right: 1px solid #333; z-index: 1001; }
+        .sidebar-header { padding: 25px; background: #111; color: var(--accent); font-weight: bold; font-size: 1.2rem; letter-spacing: 2px; border-bottom: 1px solid #333; }
+        .nav-item { padding: 18px 25px; cursor: pointer; border-bottom: 1px solid #222; transition: 0.3s; color: #888; }
+        .nav-item:hover, .nav-item.active { background: #252525; color: var(--accent); border-left: 4px solid var(--accent); }
 
-        /* MAIN */
-        .main-content { margin-left: 250px; flex-grow: 1; }
-        .top-nav { height: 70px; background: white; display: flex; justify-content: flex-end; align-items: center; padding: 0 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        
-        /* TECHNICAL BATTERY */
-        .battery-container { display: flex; align-items: center; gap: 10px; }
-        .battery-box { padding: 5px 12px; border-radius: 4px; font-weight: bold; font-size: 1.1rem; }
-        .online { background: #d4efdf; color: #145a32; }
-        .offline { background: #fadbd8; color: #7b241c; }
-        .icon-stack { position: relative; font-size: 2rem; display: flex; align-items: center; justify-content: center; }
-        #charging-bolt { position: absolute; font-size: 1.2rem; color: #f1c40f; display: none; text-shadow: 0 0 3px black; }
+        /* FIXED TECHNICAL GPS HEADER */
+        .fixed-header {
+            position: fixed; top: 0; left: 250px; right: 0; height: 90px;
+            background: #111; border-bottom: 1px solid #333;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 30px; z-index: 1000; font-family: 'Courier New', monospace;
+        }
+        .gps-display { line-height: 1.2; }
+        .gps-address { color: var(--accent); font-size: 0.95rem; font-weight: bold; }
+        .gps-meta { color: #666; font-size: 0.8rem; margin-top: 5px; }
 
-        /* TABULAR VIEW */
-        .view-section { display: none; padding: 30px; }
-        .view-section.active { display: block; }
-        
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        th { background: var(--dark); color: white; padding: 15px; text-align: left; }
-        td { padding: 12px 15px; border-bottom: 1px solid #ddd; font-size: 0.95rem; }
-        tr:hover { background: #f9f9f9; }
-        .type-incoming { color: #27ae60; font-weight: bold; }
-        .type-outgoing { color: #2980b9; font-weight: bold; }
+        /* BATTERY & STATUS */
+        .status-group { display: flex; align-items: center; gap: 20px; }
+        .bat-box { padding: 5px 15px; border-radius: 3px; font-weight: bold; background: #222; border: 1px solid #444; }
+        .online { color: #00ff00; border-color: #00ff00; }
+        .offline { color: #ff3333; border-color: #ff3333; }
+        .bat-icon-stack { position: relative; font-size: 2rem; display: flex; align-items: center; }
+        #bolt { position: absolute; color: #f1c40f; font-size: 1.2rem; left: 8px; text-shadow: 0 0 5px black; display: none; }
 
-        /* DASHBOARD */
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-        .card { background: white; padding: 25px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-left: 5px solid var(--accent); }
+        /* CONTENT VIEWS */
+        .main-content { margin-left: 250px; padding-top: 90px; flex: 1; height: 100vh; overflow-y: auto; }
+        .view { display: none; padding: 30px; height: calc(100vh - 150px); }
+        .view.active { display: block; }
+
+        /* MAP STYLING */
+        #map { width: 100%; height: 400px; border-radius: 8px; border: 1px solid #333; margin-top: 15px; background: #1a1a1a; }
+
+        /* TABULAR SMS */
+        table { width: 100%; border-collapse: collapse; background: #151515; border: 1px solid #333; }
+        th { background: #222; color: var(--accent); padding: 15px; text-align: left; font-size: 0.8rem; text-transform: uppercase; }
+        td { padding: 12px 15px; border-bottom: 1px solid #222; font-size: 0.9rem; }
+        .Incoming { color: #00ff88; }
+        .Outgoing { color: #00ccff; }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <div class="sidebar-header">SYSTEM CONTROL</div>
-        <div class="nav-item active" onclick="showView('dashboard')">🏠 Dashboard</div>
-        <div class="nav-item" onclick="showView('sms')">✉️ SMS Logs</div>
-        <div class="nav-item">📞 Call Logs</div>
-        <div class="nav-item">📂 File Explorer</div>
-    </div>
+<div class="sidebar">
+    <div class="sidebar-header">SYSTEM_CORE v2</div>
+    <div class="nav-item active" onclick="showView('dash')">📊 TERMINAL</div>
+    <div class="nav-item" onclick="showView('sms')">✉️ SMS_DATA</div>
+    <div class="nav-item" onclick="showView('map-view')">📍 LIVE_MAP</div>
+</div>
 
-    <div class="main-content">
-        <div class="top-nav">
-            <div class="battery-container">
-                <div id="bat-box" class="battery-box offline"><span id="bat-pct">--</span>%</div>
-                <div class="icon-stack">
-                    <span>🔋</span>
-                    <span id="charging-bolt">⚡</span>
-                </div>
-            </div>
+<div class="fixed-header">
+    <div class="gps-display">
+        <div id="gps-addr" class="gps-address">SYNCING GPS SATELLITES...</div>
+        <div class="gps-meta">
+            ACCURACY: <span id="gps-acc">--</span> M | LAST_FIX: <span id="gps-time">--</span>
         </div>
+    </div>
+    <div class="status-group">
+        <div id="status-box" class="bat-box offline">DEVICE_OFFLINE</div>
+        <div style="font-size: 1.8rem; color: var(--accent);"><span id="pct">--</span>%</div>
+        <div class="bat-icon-stack"><span>🔋</span><span id="bolt">⚡</span></div>
+    </div>
+</div>
 
-        <section id="dashboard" class="view-section active">
-            <h2>Dashboard Overview</h2>
-            <div class="grid">
-                <div class="card" onclick="showView('sms')">
-                    <div>
-                        <div style="color: #7f8c8d; font-size: 0.9rem;">TOTAL MESSAGES</div>
-                        <div id="sms-count" style="font-size: 2rem; font-weight: bold;">0</div>
-                    </div>
-                    <div style="font-size: 2.5rem;">✉️</div>
-                </div>
-            </div>
-        </section>
-
-        <section id="sms" class="view-section">
-            <h2>SMS Logs Table</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Type</th>
-                        <th>Number</th>
-                        <th>Message</th>
-                        <th>Date/Time</th>
-                    </tr>
-                </thead>
-                <tbody id="sms-table-body">
-                    <tr><td colspan="4" style="text-align:center;">Requesting data from device...</td></tr>
-                </tbody>
-            </table>
-        </section>
+<div class="main-content">
+    <div id="dash" class="view active">
+        <h2>System Status</h2>
+        <p>Telemetry stream active. All systems nominal.</p>
     </div>
 
-    <script>
-        const socket = io();
+    <div id="map-view" class="view">
+        <h2>Geospatial Intelligence</h2>
+        <div id="map"></div>
+    </div>
 
-        function showView(viewId) {
-            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-            
-            if(viewId === 'sms') {
-                socket.emit('get-sms-request');
+    <div id="sms" class="view">
+        <h2>Communication Logs</h2>
+        <table>
+            <thead><tr><th>TYPE</th><th>SOURCE/DEST</th><th>CONTENT</th><th>TIMESTAMP</th></tr></thead>
+            <tbody id="sms-table"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const socket = io();
+    let map, marker;
+
+    // Initialize Map
+    function initMap() {
+        if (!map) {
+            map = L.map('map').setView([0, 0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+            marker = L.marker([0, 0]).addTo(map);
+        }
+    }
+
+    function showView(id) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id === 'map-view') {
+            setTimeout(() => { initMap(); map.invalidateSize(); }, 200);
+        }
+        if(id === 'sms') socket.emit('get-sms-request');
+    }
+
+    socket.on('ui-battery', (data) => {
+        document.getElementById('pct').innerText = data.percent;
+        document.getElementById('status-box').innerText = "DEVICE_ONLINE";
+        document.getElementById('status-box').className = "bat-box online";
+        document.getElementById('bolt').style.display = data.charging ? "block" : "none";
+    });
+
+    socket.on('ui-gps-display', (data) => {
+        document.getElementById('gps-addr').innerText = data.address;
+        document.getElementById('gps-acc').innerText = data.accuracy;
+        document.getElementById('gps-time').innerText = data.time;
+
+        // Update Map Marker
+        if (data.lat && data.lng) {
+            const pos = [data.lat, data.lng];
+            if (map) {
+                map.setView(pos, 15);
+                marker.setLatLng(pos);
             }
         }
+    });
 
-        socket.on('ui-battery', (data) => {
-            document.getElementById('bat-pct').innerText = data.percent;
-            document.getElementById('bat-box').className = "battery-box online";
-            document.getElementById('charging-bolt').style.display = data.charging ? "block" : "none";
-        });
+    socket.on('ui-sms-display', (data) => {
+        const html = data.map(m => `<tr><td class="${m.type}">${m.type}</td><td><b>${m.address}</b></td><td>${m.body}</td><td style="color:#666;">${new Date(m.date).toLocaleString()}</td></tr>`).join('');
+        document.getElementById('sms-table').innerHTML = html;
+    });
 
-        socket.on('ui-sms-display', (smsArray) => {
-            document.getElementById('sms-count').innerText = smsArray.length;
-            const body = document.getElementById('sms-table-body');
-            body.innerHTML = smsArray.map(m => `
-                <tr>
-                    <td class="type-${m.type.toLowerCase()}">${m.type}</td>
-                    <td><b>${m.address}</b></td>
-                    <td>${m.body}</td>
-                    <td style="color:#7f8c8d; font-size:0.85rem;">${new Date(m.date).toLocaleString()}</td>
-                </tr>
-            `).join('');
-        });
-
-        socket.on('device-status', (status) => {
-            if(!status.online) document.getElementById('bat-box').className = "battery-box offline";
-        });
-    </script>
+    socket.on('device-status', (s) => { 
+        if(!s.online) {
+            document.getElementById('status-box').innerText = "DEVICE_OFFLINE";
+            document.getElementById('status-box').className = "bat-box offline";
+        }
+    });
+</script>
 </body>
 </html>
