@@ -8,7 +8,6 @@
             --sidebar-bg: #34495e;
             --main-bg: #f5f5f5;
             --accent-teal: #1abc9c;
-            /* Colors from DASHBOARD.jpg */
             --sms-blue: #3498db;
             --calls-teal: #1abc9c;
             --loc-purple: #9b59b6;
@@ -29,7 +28,7 @@
             min-height: 100vh;
         }
 
-        /* SIDEBAR (Match SIDE_BAR.jpg) */
+        /* SIDEBAR */
         .sidebar {
             width: 250px;
             background: var(--sidebar-bg);
@@ -39,6 +38,7 @@
             position: fixed;
             height: 100vh;
             overflow-y: auto;
+            z-index: 100;
         }
 
         .sidebar-header {
@@ -62,7 +62,7 @@
             font-size: 0.95rem;
         }
 
-        .nav-item:hover { background: #2c3e50; color: white; }
+        .nav-item:hover, .nav-item.active { background: #2c3e50; color: white; }
 
         /* MAIN CONTENT AREA */
         .main-content {
@@ -81,6 +81,9 @@
             align-items: center;
             padding: 0 30px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 50;
         }
 
         .status-wrapper { display: flex; align-items: center; gap: 10px; }
@@ -99,10 +102,13 @@
         #charging-icon { color: #f1c40f; } 
         #unplugged-icon { color: #27ae60; }
 
-        /* DASHBOARD GRID (Match DASHBOARD.jpg) */
-        .dashboard-container { padding: 30px; }
+        /* CONTENT VIEWS */
+        .view-section { display: none; padding: 30px; }
+        .view-section.active { display: block; }
+
         .page-title { font-size: 1.5rem; color: #7f8c8d; margin-bottom: 25px; font-weight: 300; }
 
+        /* DASHBOARD GRID */
         .grid-layout {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -119,6 +125,7 @@
             position: relative;
             overflow: hidden;
             border-radius: 2px;
+            cursor: pointer;
         }
 
         .card-icon { font-size: 4rem; opacity: 0.2; position: absolute; left: 10px; }
@@ -126,7 +133,6 @@
         .card-count { font-size: 2.2rem; display: block; }
         .card-label { font-size: 0.85rem; text-transform: uppercase; font-weight: bold; }
 
-        /* Card Colors */
         .c-sms { background: var(--sms-blue); }
         .c-calls { background: var(--calls-teal); }
         .c-loc { background: var(--loc-purple); }
@@ -141,24 +147,16 @@
 <body>
 
     <div class="sidebar">
-        <div class="sidebar-header">🏠 Dashboard</div>
-        <div class="nav-item">✉️ SMS</div>
-        <div class="nav-item">🖼️ MMS</div>
-        <div class="nav-item">📞 Calls</div>
-        <div class="nav-item">📍 Locations</div>
-        <div class="nav-item">📷 Pictures</div>
-        <div class="nav-item">🎮 Apps</div>
-        <div class="nav-item">📅 Calendar</div>
-        <div class="nav-item">📖 Contacts</div>
-        <div class="nav-item">🌐 Site Web</div>
-        <div class="nav-item">🔭 Screenshot</div>
-        <div class="nav-item">👁️ Instant Messaging</div>
-        <div class="nav-item">☁️ Remote Control</div>
-        <div class="nav-item">🎥 Live Viewing</div>
-        <div class="nav-item">📂 File Explorer</div>
-        <div class="nav-item">🔒 Schedule Restriction</div>
-        <div class="nav-item">🚀 SMS Commands</div>
-        <div class="nav-item">📊 Statistics</div>
+        <div class="sidebar-header">🏠 System Monitor</div>
+        <div class="nav-item active" onclick="showView('dashboard')">🏠 Dashboard</div>
+        <div class="nav-item" onclick="showView('sms')">✉️ SMS</div>
+        <div class="nav-item" onclick="showView('calls')">📞 Calls</div>
+        <div class="nav-item" onclick="showView('locations')">📍 Locations</div>
+        <div class="nav-item" onclick="showView('pictures')">📷 Pictures</div>
+        <div class="nav-item" onclick="showView('apps')">🎮 Apps</div>
+        <div class="nav-item" onclick="showView('contacts')">📖 Contacts</div>
+        <div class="nav-item" onclick="showView('web')">🌐 Site Web</div>
+        <div class="nav-item" onclick="showView('explorer')">📂 File Explorer</div>
     </div>
 
     <div class="main-content">
@@ -172,52 +170,58 @@
             </div>
         </div>
 
-        <div class="dashboard-container">
+        <section id="dashboard" class="view-section active">
             <div class="page-title">Dashboard</div>
-            
             <div class="grid-layout">
-                <div class="dash-card c-sms">
+                <div class="dash-card c-sms" onclick="showView('sms')">
                     <span class="card-icon">✉️</span>
                     <div class="card-info"><span class="card-count">0</span><span class="card-label">SMS</span></div>
                 </div>
-                <div class="dash-card c-calls">
+                <div class="dash-card c-calls" onclick="showView('calls')">
                     <span class="card-icon">📞</span>
                     <div class="card-info"><span class="card-count">0</span><span class="card-label">Calls</span></div>
                 </div>
-                <div class="dash-card c-loc">
+                <div class="dash-card c-loc" onclick="showView('locations')">
                     <span class="card-icon">📍</span>
-                    <div class="card-info"><span class="card-count">50+</span><span class="card-label">Locations</span></div>
-                </div>
-                <div class="dash-card c-pic">
-                    <span class="card-icon">📷</span>
-                    <div class="card-info"><span class="card-count">0</span><span class="card-label">Pictures</span></div>
-                </div>
-                <div class="dash-card c-apps">
-                    <span class="card-icon">🎮</span>
-                    <div class="card-info"><span class="card-count">0</span><span class="card-label">Apps</span></div>
-                </div>
-                <div class="dash-card c-contacts">
-                    <span class="card-icon">📖</span>
-                    <div class="card-info"><span class="card-count">0</span><span class="card-label">Contacts</span></div>
-                </div>
-                <div class="dash-card c-web">
-                    <span class="card-icon">🌐</span>
-                    <div class="card-info"><span class="card-count">0</span><span class="card-label">Site Web</span></div>
-                </div>
-                <div class="dash-card c-screen">
-                    <span class="card-icon">🔭</span>
-                    <div class="card-info"><span class="card-count">0</span><span class="card-label">Screenshot</span></div>
-                </div>
-                <div class="dash-card c-im">
-                    <span class="card-icon">👁️</span>
-                    <div class="card-info"><span class="card-count">0</span><span class="card-label">Instant Messaging</span></div>
+                    <div class="card-info"><span class="card-count">0</span><span class="card-label">Locations</span></div>
                 </div>
             </div>
+        </section>
+
+        <section id="sms" class="view-section">
+            <div class="page-title">SMS Messages</div>
+            <p>No messages received yet.</p>
+        </section>
+
+        <section id="calls" class="view-section">
+            <div class="page-title">Call Logs</div>
+            <p>No call logs available.</p>
+        </section>
+        
         </div>
-    </div>
 
     <script>
         const socket = io();
+        
+        // FUNCTION TO SWITCH VIEWS
+        function showView(viewId) {
+            // Hide all sections
+            document.querySelectorAll('.view-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            // Show selected section
+            const target = document.getElementById(viewId);
+            if (target) target.classList.add('active');
+
+            // Update sidebar active state
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.innerText.toLowerCase().includes(viewId)) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
         const batBox = document.getElementById('bat-box');
         const batPct = document.getElementById('bat-pct');
         const chargingIcon = document.getElementById('charging-icon');
