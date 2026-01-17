@@ -138,7 +138,7 @@ td {
     socket.on('ui-battery', (data) => {
         document.getElementById('pct').innerText = data.percent;
         document.getElementById('status-dot').style.color = "green";
-        document.getElementById('status-dot').innerText = "● ONLINE";
+        document.getElementById('status-dot').innerText = "●";
         document.getElementById('bolt').style.display = data.charging ? "block" : "none";
     });
 
@@ -181,4 +181,5 @@ td {
 </script>
 </body>
 </html>
+
 
