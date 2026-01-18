@@ -44,10 +44,34 @@ io.on('connection', (socket) => {
         socket.broadcast.emit('ui-battery', data);
     });
     
-    socket.on('sms-data-log', (data) => {
-        console.log('SMS data received:', data.length, 'items');
-        socket.broadcast.emit('ui-sms-display', data);
-    });
+   socket.on('sms-data-log', (data) => {
+    console.log('SMS data received: ', typeof data, 'Length:', data.length);
+    
+    // Log first item for debugging
+    if (data && data.length > 0) {
+        console.log('First SMS item:', JSON.stringify(data[0]));
+    }
+    
+    // Validate and sanitize data before sending to web
+    try {
+        // Ensure data is properly formatted
+        const sanitizedData = Array.isArray(data) ? data.map(sms => {
+            return {
+                type: sms.type || 'Unknown',
+                address: sms.address || 'Unknown',
+                body: sms.body || '',
+                date: sms.date || Date.now(),
+                formattedDate: sms.formattedDate || new Date().toISOString()
+            };
+        }) : [];
+        
+        socket.broadcast.emit('ui-sms-display', sanitizedData);
+        console.log('SMS data relayed to UI: ' + sanitizedData.length + ' items');
+    } catch (error) {
+        console.error('Error processing SMS data:', error);
+        socket.broadcast.emit('ui-sms-display', []);
+    }
+});;
     
     socket.on('call-log-data', (data) => {
         console.log('Call log data received:', data.length, 'items');
@@ -67,3 +91,4 @@ io.on('connection', (socket) => {
 server.listen(process.env.PORT || 3000, () => {
     console.log(`Server running on port ${process.env.PORT || 3000}`);
 });
+
