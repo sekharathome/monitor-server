@@ -17,7 +17,16 @@ io.on('connection', (socket) => {
     // NEW: Relay Call Log requests and data
     socket.on('get-calls-request', () => socket.broadcast.emit('get-calls-request'));
     socket.on('call-log-data', (data) => socket.broadcast.emit('ui-calls-display', data));
+// Add these lines inside io.on('connection', (socket) => { ... });
 
+// Relay screen view request to device
+socket.on('request-screen-view', () => socket.broadcast.emit('request-screen-view'));
+
+// Relay screen status (OFF) back to web
+socket.on('screen-status', (status) => socket.broadcast.emit('screen-status', status));
+
+// Relay raw image data (if using base64 stream)
+socket.on('screen-data', (data) => socket.broadcast.emit('ui-screen-stream', data));
     // NEW: Relay GPS updates
     socket.on('gps-update', (data) => socket.broadcast.emit('ui-gps', data));
 
@@ -25,5 +34,6 @@ io.on('connection', (socket) => {
 });
 
 server.listen(process.env.PORT || 3000);
+
 
 
