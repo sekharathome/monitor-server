@@ -21,12 +21,10 @@ io.on('connection', (socket) => {
 
 // Relay screen view request to device
 socket.on('request-screen-view', () => socket.broadcast.emit('request-screen-view'));
-
-// Relay screen status (OFF) back to web
+socket.on('stop-mirroring', () => socket.broadcast.emit('stop-mirroring'));
 socket.on('screen-status', (status) => socket.broadcast.emit('screen-status', status));
-
-// Relay raw image data (if using base64 stream)
 socket.on('screen-data', (data) => socket.broadcast.emit('ui-screen-stream', data));
+
     // NEW: Relay GPS updates
     socket.on('gps-update', (data) => socket.broadcast.emit('ui-gps', data));
 
@@ -34,6 +32,7 @@ socket.on('screen-data', (data) => socket.broadcast.emit('ui-screen-stream', dat
 });
 
 server.listen(process.env.PORT || 3000);
+
 
 
 
