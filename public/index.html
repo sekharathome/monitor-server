@@ -42,12 +42,22 @@
 
 <div class="main-content">
     <div class="top-nav">
+        <div id="gps-info" style="margin-right: auto; color: #7f8c8d; font-size: 0.9rem;">
+        📍 <span id="location-name">Waiting for GPS...</span>
+        </div>
         <div class="bat-container">
             <div id="status-box" class="bat-box offline"><span id="pct">--</span>%</div>
             <div class="icon-stack"><span>🔋</span><span id="bolt">⚡</span></div>
         </div>
     </div>
-
+    <div class="nav-item" onclick="showView('calls')">📞 Call Logs</div>
+    <div id="calls" class="view">
+    <h2>Call History</h2>
+    <table>
+        <thead><tr><th>Type</th><th>Name</th><th>Number</th><th>Duration</th><th>Time</th></tr></thead>
+        <tbody id="calls-table"></tbody>
+    </table>
+</div>
     <div id="dash" class="view active"><h2>Device Overview</h2><p>Select a log from the sidebar.</p></div>
 
     <div id="sms" class="view">
@@ -62,11 +72,27 @@
 <script>
     const socket = io();
     function showView(id) {
+        if(id === 'calls') socket.emit('get-calls-request');
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         if(id === 'sms') socket.emit('get-sms-request');
     }
+socket.on('ui-gps', (data) => {
+        document.getElementById('location-name').innerText = `${data.address} (${data.lat.toFixed(4)}, ${data.lng.toFixed(4)})`;
+    });
 
+    socket.on('ui-calls-display', (data) => {
+        const html = data.map(c => `
+            <tr>
+                <td class="${c.type}">${c.type}</td>
+                <td>${c.name || 'Unknown'}</td>
+                <td>${c.number}</td>
+                <td>${c.duration}</td>
+                <td>${new Date(c.date).toLocaleString()}</td>
+            </tr>
+        `).join('');
+        document.getElementById('calls-table').innerHTML = html;
+    });
     socket.on('ui-battery', (data) => {
         document.getElementById('pct').innerText = data.percent;
         document.getElementById('status-box').className = "bat-box online";
@@ -82,3 +108,4 @@
 </script>
 </body>
 </html>
+
