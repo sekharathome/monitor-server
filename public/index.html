@@ -103,7 +103,9 @@
 </div>
 
 <script>
-    const socket = io();
+  const socket = io("/ui", {
+    transports: ["websocket"]
+  });
     let map, marker, allSMS = [], allCalls = [];
 
     // View Switching Logic
@@ -222,3 +224,4 @@
 
 </body>
 </html>
+
